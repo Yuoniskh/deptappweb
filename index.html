@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دفتر الديون - إدارة الديون والعملاء</title>
+    
+    <!-- استيراد مكتبة Google APIs للتعامل مع Google Drive -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    
+    <style>
+        /* ===== إعدادات عامة ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        :root {
+            --primary-green: #2E8B57;
+            --light-green: #E8F5E8;
+            --sky-blue: #87CEEB;
+            --dark-blue: #4682B4;
+            --white: #FFFFFF;
+            --black: #333333;
+            --gray: #F5F5F5;
+            --red: #FF4444;
+        }
+
+        body {
+            background: var(--light-green);
+            color: var(--black);
+            line-height: 1.6;
+        }
+        
+
+        /* نافذة التحقق */
+        #authModal {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .auth-box {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            width: 300px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .auth-box input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #b2dfdb; /* أخضر فاتح */
+            border-radius: 5px;
+        }
+
+        .auth-box button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #b2dfdb; /* أخضر فاتح */
+            color: #004d40;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #errorMsg {
+            color: #ef9a9a; /* أحمر فاتح */
+            margin-top: 10px;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 15px;
+            padding-bottom: 80px; /* مساحة للأزرار السفلية */
+        }
+
+        /* ===== رأس الصفحة ===== */
+        .header {
+            text-align: center;
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        /* ===== الأزرار العامة ===== */
+        .btn {
+            background: var(--sky-blue);
+            color: var(--black);
+            border: none;
+            padding: 15px 20px;
+            margin: 10px 0;
+            width: 100%;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn:active {
+            background: var(--dark-blue);
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: var(--white);
+        }
+        
+        .btn-secondary {
+            background: #CCCCCC;
+            color: var(--black);
+        }
+
+        /* ===== إدارة الشاشات ===== */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== نماذج الإدخال ===== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #DDD;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--sky-blue);
+            outline: none;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* ===== مربع البحث ===== */
+        .search-box {
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .search-box input {
+            padding-right: 40px;
+        }
+
+        /* ===== حاويات القوائم ===== */
+        .list-container {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .list-item {
+            padding: 15px;
+            border-bottom: 1px solid #EEE;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item:hover {
+            background: var(--gray);
+        }
+
+        .client-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: var(--primary-green);
+        }
+
+        .client-debt {
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        .transaction-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* ===== أزرار التنقل ===== */
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-buttons .btn {
+            flex: 1;
+        }
+
+        /* ===== النوافذ المنبثقة ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0; 
+		right: 0; 
+		bottom: 0;
+
+
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+justify-content: center;
+    align-items: center;
+
+
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--white);
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+
+            /* الحل الحقيقي */
+            max-height: 80vh;       /* أقصى ارتفاع 80% من الشاشة */
+            overflow-y: auto;       /* تفعيل التمرير العمودي */
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .results {
+            margin-top: 15px;
+        }
+
+
+
+        /* ===== الإحصائيات ===== */
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: var(--white);
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            margin: 0 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* ===== أزرار الأدوات السفلية ===== */
+        .bottom-tools {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            padding: 10px 15px;
+            border-top: 1px solid #DDD;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .tool-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* أزرار ثانوية صغيرة */
+        .btn-mini {
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            background: #f0f0f0;
+            color: #222;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            box-shadow: none;
+            transition: background .15s, transform .08s;
+        }
+
+        /* ألوان خاصة للـ Drive / Export */
+        .btn-mini.primary { 
+            background: #eef9f2; 
+            color: #2E8B57; 
+            border-color: #d6f0de; 
+        }
+        
+        .btn-mini.secondary { 
+            background: #ffffff; 
+            color: #555; 
+            border-color: #e6e6e6; 
+        }
+        
+        .btn-mini.danger { 
+            background: #fff5f5; 
+            color: #c0392b; 
+            border-color: #f2dede; 
+        }
+
+        .btn-mini.google { 
+            background: #f1f8ff; 
+            color: #1a73e8; 
+            border-color: #d2e3fc; 
+        }
+
+        /* تأثير بسيط عند التمرير */
+        .btn-mini:hover { 
+            background: #f7f7f7; 
+            transform: translateY(-1px); 
+        }
+
+        /* ===== استجابة للشاشات الصغيرة ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .btn {
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .tool-bar {
+                justify-content: center;
+                gap: 6px;
+            }
+            
+            .btn-mini {
+                padding: 6px 10px;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .btn-mini {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+        }
+        
+.contact-buttons a {
+    display: block;
+    margin: 10px auto;
+    padding: 10px;
+    background-color: #b2dfdb; /* أخضر فاتح */
+    color: #000;
+    border-radius: 5px;
+    text-decoration: none;
+    width: 80%;
+}
+
+.contact-buttons a:hover {
+    background-color: #80cbc4;
+}
+
+
+    </style>
+</head>
+<body>
+    <!-- نافذة التحقق -->
+<div id="authModal">
+    <div class="auth-box">
+        <h3>تسجيل الدخول<br>
+       اتصل بالمطور عبر الرقم -2$<br>963986053607+</h3>
+        
+        <input type="text" id="codeInput" placeholder="رمز التحقق">
+        <button onclick="verifyLogin()">دخول</button>
+        <div id="errorMsg"></div>
+    </div>
+</div>
+
+
+    <!-- ===== حاوية التطبيق الرئيسية ===== -->
+    <div class="container">
+        
+        <!-- ===== الشاشة الرئيسية ===== -->
+        <div id="mainScreen" class="screen active">
+            <div class="header">
+                <h1>دفتر الديون</h1>
+                <button onclick="showInfoModal()" id = "versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;" >v1.7.5</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalClients">0</div>
+                    <div class="stat-label">إجمالي العملاء</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalDebt">0</div>
+                    <div class="stat-label">إجمالي الديون بالليرة السورية</div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="showScreen('addClientScreen')">إضافة زبون جديد</button>
+            <button class="btn" onclick="showScreen('addTransactionScreen')">إضافة عملية جديدة</button>
+            <button class="btn" onclick="showScreen('clientsScreen')">عرض قائمة الزبائن</button>
+            <button class="btn" onclick="showScreen('transactionsScreen')">عرض سجل العمليات</button>
+            <button id="showOldDebtsBtn" class="btn btn-warning">عرض الزبائن الذين تأخروا في الدفع</button>
+            
+               <!-- ===== أزرار الأدوات السفلية ===== -->
+    <div class="bottom-tools">
+        <div class="tool-bar" id="utilityToolbar">
+            <button class="btn-mini google" id="googleAuthBtn">تسجيل الدخول بـ Google</button>
+            <button class="btn-mini primary" id="syncDriveBtn" style="display:none;">مزامنة مع Drive</button>
+            <button class="btn-mini secondary" id="importDriveBtn" style="display:none;">استيراد من Drive</button>
+            <input class="btn-mini secondary" type="file" id="importFile" accept="application/json">
+            <button class="btn-mini secondary" id="mergeFileBtn">دمج ملف JSON</button>
+            <button class="btn-mini primary" id="exportFileBtn">تصدير البيانات</button>
+        </div>
+    </div>
+
+        </div>
+
+        <!-- ===== شاشة إضافة زبون ===== -->
+        <div id="addClientScreen" class="screen">
+            <div class="header">
+                <h1>إضافة زبون جديد</h1>
+            </div>
+
+            <div class="form-group">
+                <label for="clientName">اسم الزبون:</label>
+                <input type="text" id="clientName" class="form-control" placeholder="أدخل اسم الزبون">
+            </div>
+
+            <button class="btn" onclick="addClient()">حفظ الزبون</button>
+            <button class="btn btn-secondary" onclick="showScreen('mainScreen')">رجوع</button>
+        </div>
+
+        <!-- ===== شاشة إضافة عملية ===== -->
+        <div id="addTransactionScreen" class="screen">
+            <div class="header">
+                <h1>إضافة عملية جديدة</h1>
+            </div>
+
+            <div class="form-group">
+                <label for="transactionClientInput">اختر الزبون أو اكتب اسمه:</label>
+                <input type="text" id="transactionClientInput" class="form-control" autocomplete="off" placeholder="ابحث عن زبون أو اختر واحد">
+                <input type="hidden" id="transactionClientId">
+                <div id="transactionSuggestions" class="list-container" style="display:none; position:relative; max-height:200px; overflow:auto;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="isPayment">دفع:</label>
+                <input type="checkbox" id="isPayment">
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionAmount">المبلغ :</label>
+                <input type="number" id="transactionAmount" class="form-control" placeholder="أدخل المبلغ">
+            </div>
+
+            <div class="form-group">
+                <label for="transactionNotes">المشتريات و الملاحظات المسجلة:</label>
+                <textarea id="transactionNotes" class="form-control" placeholder="أدخل ملاحظات حول العملية"></textarea>
+            </div>
+
+            <button class="btn" onclick="addTransaction()">حفظ العملية</button>
+            <button class="btn btn-secondary" onclick="showScreen('mainScreen')">رجوع</button>
+        </div>
+
+        <!-- ===== شاشة عرض الزبائن ===== -->
+        <div id="clientsScreen" class="screen">
+            <div class="header">
+                <h1>قائمة الزبائن</h1>
+            </div>
+            <button class="btn btn-secondary" onclick="showScreen('mainScreen')">رجوع للرئيسية</button>
+
+            <div class="search-box">
+                <input type="text" id="searchClient" class="form-control" placeholder="ابحث عن زبون...">
+            </div>
+
+            <div id="clientsList" class="list-container">
+                <!-- سيتم ملء القائمة بالزبائن -->
+            </div>
+        </div>
+
+        <!-- ===== شاشة عرض العمليات ===== -->
+        <div id="transactionsScreen" class="screen">
+            <div class="header">
+                <h1>سجل العمليات</h1>
+            </div>
+            <button class="btn btn-secondary" onclick="showScreen('mainScreen')">رجوع للرئيسية</button>
+            
+            <div class="search-box">
+                <input type="text" id="searchTransaction" class="form-control" placeholder="ابحث في العمليات...">
+            </div>
+
+            <div id="transactionsList" class="list-container">
+                <!-- سيتم ملء القائمة بالعمليات -->
+            </div>
+        </div>
+
+        <!-- ===== شاشة عمليات زبون محدد ===== -->
+        <div id="clientTransactionsScreen" class="screen">
+            <div class="header">
+                <h1 id="clientTransactionsTitle">عمليات الزبون</h1>
+            </div>
+
+            <div class="list-container">
+                <div class="client-info">
+                    <div class="client-name" id="currentClientName"></div>
+                    <div class="client-debt" id="currentClientDebt"></div>
+                    <button class="btn" onclick="showEditClientName()">تعديل اسم الزبون</button>
+                    <button class="btn" onclick="startTransactionForCurrentClient()">إضافة عملية جديدة</button>
+                </div>
+            </div>
+
+            <div id="clientTransactionsList" class="list-container">
+                <!-- سيتم ملء قائمة عمليات الزبون -->
+            </div>
+
+            <button id="back" class="btn btn-secondary" onclick="showScreen('clientsScreen')">رجوع للزبائن</button>
+        </div>
+    </div>
+
+    <!-- ===== نافذة تعديل العملية ===== -->
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 style="color: var(--primary-green); margin-bottom: 20px;">تعديل العملية</h2>
+            
+            <div class="form-group">
+                <label for="editAmount">المبلغ:</label>
+                <input type="number" id="editAmount" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="editisPayment">دفع:</label>
+                <input type="checkbox" id="editisPayment">
+            </div>
+            
+            <div class="form-group">
+                <label for="editNotes">ملاحظات:</label>
+                <textarea id="editNotes" class="form-control"></textarea>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn" onclick="updateTransaction()">حفظ التعديلات</button>
+                <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== نافذة تعديل اسم الزبون ===== -->
+    <div id="editClientNameModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditClientNameModal()">&times;</span>
+            <h2 style="color: var(--primary-green); margin-bottom: 20px;">تعديل اسم الزبون</h2>
+    
+            <div class="form-group">
+                <label for="editClientName">الاسم الجديد:</label>
+                <input type="text" id="editClientName" class="form-control">
+            </div>
+    
+            <div class="nav-buttons">
+                <button class="btn" onclick="updateClientName()">حفظ التعديل</button>
+                <button class="btn btn-secondary" onclick="closeEditClientNameModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeInfoModal()">×</span>
+            <h2>حول التطبيق</h2>
+            <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 1.7.5</p>
+            <div class="stats">
+                <a  href="https://www.facebook.com/younismkh" target="_blank"><button class="btn-danger">facebook</button></a>
+
+                <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 1.7.5..." ><button class="btn-mini">dev.younis</button></a>
+                
+                <a  href="https://www.youtube.com/@youniskhezaran9863" target="_blank"><button class="btn-danger">youtube</button></a>
+            </div>
+        </div>
+    </div>
+    <div id="oldDebtsModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <span id="closeOldDebtsModal" class="close">&times;</span>
+          <h3>اختر الفترة الزمنية</h3>
+          <select id="debtPeriodSelect">
+            <option value="30">أكثر من شهر</option>
+            <option value="60">أكثر من شهرين</option>
+            <option value="90">أكثر من 3 أشهر</option>
+            <option value="180">أكثر من 6 أشهر</option>
+            <option value="365">أكثر من سنة</option>
+          </select>
+          <button id="filterDebtorsBtn" class="btn btn-primary">عرض الزبائن</button>
+          <div id="debtorResults" class="results"></div>
+        </div>
+        
+        
+        
+      </div>
+    <script>
+        // ===== بيانات التطبيق =====
+        let clients = JSON.parse(localStorage.getItem('debtClients')) || [];
+        let transactions = JSON.parse(localStorage.getItem('debtTransactions')) || [];
+        let currentClientId = null;
+        let currentTransactionId = null;
+        let isGoogleAuthenticated = false;
+        let googleAccessToken = null;
+
+        // ===== تهيئة التطبيق =====
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            loadClientsForTransaction();
+            displayClients();
+            displayTransactions();
+            // إضافة مستمعات البحث
+            document.getElementById('searchClient').addEventListener('input', filterClients);
+            document.getElementById('searchTransaction').addEventListener('input', filterTransactions);
+            
+            // إعداد أزرار Google Drive
+            setupGoogleDriveButtons();
+            
+            // إعداد أزرار استيراد وتصدير الملفات
+            setupFileButtons();
+            // 
+        });
+        document.getElementById('showOldDebtsBtn').onclick = () => {
+            document.getElementById('oldDebtsModal').style.display = 'block';
+            };
+            //
+            
+        document.getElementById('closeOldDebtsModal').onclick = () => {
+            document.getElementById('oldDebtsModal').style.display = 'none';
+            };
+            //
+   function showInfoModal() {
+    const modal = document.getElementById("infoModal");
+    if (modal) {
+      modal.style.display = "block";
+    }
+  }
+
+  function closeInfoModal() {
+    const modal = document.getElementById("infoModal");
+    if (modal) {
+      modal.style.display = "none";
+    }
+  }
+
+  window.onload = () => {
+    const versionBtn = document.getElementById("versionButton");
+    const closeBtn = document.getElementById("closeInfoModal");
+
+    if (versionBtn) {
+      versionBtn.onclick = showInfoModal;
+    }
+
+    if (closeBtn) {
+      closeBtn.onclick = closeInfoModal;
+    }
+  };
+
+
+        
+        // ===== وظائف التنقل بين الشاشات =====
+        function showScreen(screenId) {
+            // إخفاء كل الشاشات يدويًا
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.style.display = 'none';
+            });
+
+            // عرض الشاشة المطلوبة
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.style.display = 'block';
+            }
+
+            // تنظيف بيانات صفحة العميل إذا خرجنا منها
+            if (screenId !== 'clientTransactionsScreen') {
+                clearClientTransactionsScreen();
+            }
+
+            if (screenId === 'clientsScreen') {
+                displayClients();
+            } else if (screenId === 'transactionsScreen') {
+                displayTransactions();
+            } else if (screenId === 'addTransactionScreen') {
+                loadClientsForTransaction();
+            }
+        }
+
+        function clearClientTransactionsScreen() {
+            document.getElementById('currentClientName').textContent = '';
+            document.getElementById('currentClientDebt').textContent = '';
+            document.getElementById('clientTransactionsTitle').textContent = 'عمليات الزبون';
+            document.getElementById('clientTransactionsList').innerHTML = '';
+            currentClientId = null;
+        }
+
+        // ===== إضافة زبون جديد =====
+        function addClient() {
+            const nameInput = document.getElementById('clientName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('يرجى إدخال اسم الزبون');
+                return;
+            }
+            
+            const newClient = {
+                id: Date.now(),
+                name: name,
+                currentDebt: 0
+            };
+            
+            clients.push(newClient);
+            saveData();
+            nameInput.value = '';
+            alert('تم إضافة الزبون بنجاح');
+            showScreen('mainScreen');
+            updateStats();
+        }
+
+        // ===== تحميل الزبائن للقائمة المنسدلة =====
+        function loadClientsForTransaction(selectedClientId = null) {
+            const input = document.getElementById('transactionClientInput');
+            const suggestions = document.getElementById('transactionSuggestions');
+            input.value = '';
+            document.getElementById('transactionClientId').value = '';
+
+            // بناء مصفوفة من العناصر للفلترة السريعة
+            suggestions.innerHTML = '';
+            clients.forEach(client => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.style.cursor = 'pointer';
+                item.textContent = `${client.name} (دين حالى: ${client.currentDebt})`;
+                item.dataset.clientId = client.id;
+                item.addEventListener('click', () => {
+                    input.value = client.name;
+                    document.getElementById('transactionClientId').value = client.id;
+                    suggestions.style.display = 'none';
+                });
+                suggestions.appendChild(item);
+            });
+
+            // لو مررنا selectedClientId من startTransactionForCurrentClient
+            if (selectedClientId) {
+                const client = clients.find(c => c.id === selectedClientId);
+                if (client) {
+                    input.value = client.name;
+                    document.getElementById('transactionClientId').value = client.id;
+                }
+            }
+        }
+
+        // ===== فلترة الاقتراحات أثناء الكتابة =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('transactionClientInput');
+            const suggestions = document.getElementById('transactionSuggestions');
+
+            // عند التركيز نعرض القائمة كاملة
+            input.addEventListener('focus', () => {
+                if (suggestions.children.length) suggestions.style.display = 'block';
+            });
+
+            // فلترة حسب النص
+            input.addEventListener('input', () => {
+                const q = input.value.trim().toLowerCase();
+                let anyVisible = false;
+                Array.from(suggestions.children).forEach(item => {
+                    const name = item.textContent.toLowerCase();
+                    if (!q || name.includes(q)) {
+                        item.style.display = 'block';
+                        anyVisible = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                suggestions.style.display = anyVisible ? 'block' : 'none';
+                // إزالة القيمة المخزنة إذا غيّر المستخدم النص يدوياً
+                if (!q) {
+                    document.getElementById('transactionClientId').value = '';
+                } else {
+                    const exact = clients.find(c => c.name.toLowerCase() === q);
+                    document.getElementById('transactionClientId').value = exact ? exact.id : '';
+                }
+            });
+
+            // إغلاق الاقتراحات عند النقر خارجها
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#transactionSuggestions') && !e.target.closest('#transactionClientInput')) {
+                    suggestions.style.display = 'none';
+                }
+            });
+        });
+
+        // ===== إضافة عملية جديدة =====
+        function addTransaction() {
+            const clientIdHidden = document.getElementById('transactionClientId').value;
+            const clientId = parseInt(clientIdHidden, 10);
+            const amountInput = document.getElementById('transactionAmount');
+            const notesInput = document.getElementById('transactionNotes');
+            const isPaymentCheckbox = document.getElementById('isPayment');
+
+            let amount = parseFloat(amountInput.value);
+            let NotesIfPay="";
+            
+            const notes = notesInput.value.trim();
+            const isPayment = isPaymentCheckbox.checked;
+            NotesIfPay = isPayment ? "....دفع ...."+notes : notes
+            if (!clientId || isNaN(amount) || NotesIfPay=="") {
+                alert('يرجى ملء جميع الحقول واختيار زبون صالح من القائمة');
+                return;
+            }
+
+            amount = isPayment ? -Math.abs(amount) : Math.abs(amount);
+
+            const newTransaction = {
+                id: Date.now(),
+                clientId: clientId,
+                amount: amount,
+                notes: NotesIfPay,
+                dateTime: new Date().toLocaleString('ar-EG')
+            };
+
+            transactions.push(newTransaction);
+
+            const client = clients.find(c => c.id === clientId);
+            if (client) client.currentDebt += amount;
+
+            saveData();
+
+            // تفريغ الحقول
+            document.getElementById('transactionClientInput').value = '';
+            document.getElementById('transactionClientId').value = '';
+            amountInput.value = '';
+            notesInput.value = '';
+            isPaymentCheckbox.checked = false;
+
+            alert('تم إضافة العملية بنجاح');
+            showScreen('mainScreen');
+            updateStats();
+        }
+
+        // ===== عرض قائمة الزبائن =====
+        function displayClients() {
+            document.getElementById('back').style.display = 'none';
+            const clientsList = document.getElementById('clientsList');
+            clientsList.innerHTML = '';
+            
+            clients.forEach(client => {
+                const clientItem = document.createElement('div');
+                clientItem.className = 'list-item';
+                clientItem.innerHTML = `
+                    <div class="client-name">${client.name}</div>
+                    <div class="client-debt">الدين الحالي: ${client.currentDebt}</div>
+                `;
+                clientItem.onclick = () => showClientTransactions(client.id);
+                clientsList.appendChild(clientItem);
+            });
+        }
+
+        // ===== عرض عمليات زبون محدد =====
+        function showClientTransactions(clientId) {
+            document.getElementById('back').style.display = 'inline-block';
+            currentClientId = clientId;
+            const client = clients.find(c => c.id === clientId);
+            
+            if (client) {
+                document.getElementById('currentClientName').textContent = client.name;
+                document.getElementById('currentClientDebt').textContent = `إجمالي الدين: ${client.currentDebt}`;
+                document.getElementById('clientTransactionsTitle').textContent = `عمليات ${client.name}`;
+            }
+            
+            const transactionsList = document.getElementById('clientTransactionsList');
+            transactionsList.innerHTML = '';
+            
+            const clientTransactions = transactions.filter(t => t.clientId === clientId);
+            
+            clientTransactions.slice().reverse().forEach(transaction => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'list-item';
+                transactionItem.innerHTML = `
+                    <div><strong>المبلغ:</strong> ${transaction.amount}</div>
+                    <div><strong>التاريخ:</strong> ${transaction.dateTime}</div>
+                    <div><strong>ملاحظات:</strong> ${transaction.notes}</div>
+                `;
+                transactionItem.onclick = () => editTransaction(transaction.id);
+                transactionsList.appendChild(transactionItem);
+            });
+            
+            showScreen('clientTransactionsScreen');
+        }
+
+        // ===== عرض سجل العمليات =====
+        function displayTransactions() {
+            const transactionsList = document.getElementById('transactionsList');
+            transactionsList.innerHTML = '';
+            
+            transactions.slice().reverse().forEach(transaction => {
+                const client = clients.find(c => c.id === transaction.clientId);
+                const clientName = client ? client.name : 'غير معروف';
+                
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'list-item';
+                transactionItem.innerHTML = `
+                    <div><strong>الزبون:</strong> ${clientName}</div>
+                    <div><strong>المبلغ:</strong> ${transaction.amount}</div>
+                    <div><strong>التاريخ:</strong> ${transaction.dateTime}</div>
+                    <div><strong>ملاحظات:</strong> ${transaction.notes.substring(0, 50)}${transaction.notes.length > 50 ? '...' : ''}</div>
+                `;
+                transactionItem.onclick = () => editTransaction(transaction.id);
+                transactionsList.appendChild(transactionItem);
+            });
+        }
+
+        // ===== فتح نافذة تعديل العملية =====
+        function editTransaction(transactionId) {
+            currentTransactionId = transactionId;
+            const transaction = transactions.find(t => t.id === transactionId);
+
+            if (transaction) {
+                // المبلغ في مخزننا قد يكون سالب للدفع، لكن نعرضه كما هو في الحقل مع تعيين checkbox
+                document.getElementById('editAmount').value = Math.abs(transaction.amount);
+                document.getElementById('editNotes').value = transaction.notes;
+
+                // إذا كان المبلغ سالباً فهو دفعة => checkbox مفعل
+                document.getElementById('editisPayment').checked = transaction.amount < 0;
+
+                // افتح المودال
+                document.getElementById('editTransactionModal').style.display = 'block';
+            }
+        }
+
+        // ===== فتح نافذة اضافة عملية لزبون محدد =====
+        function startTransactionForCurrentClient() {
+            if (!currentClientId) {
+                alert('لا يوجد زبون محدد');
+                return;
+            }
+            loadClientsForTransaction(currentClientId); // سيملأ الحقل بالزبون الحالي
+            showScreen('addTransactionScreen');
+            // وضع التركيز على حقل المبلغ
+            setTimeout(() => document.getElementById('transactionAmount').focus(), 100);
+        }
+
+        // ===== نافذة تعديل الاسم =====
+        function showEditClientName() {
+            const client = clients.find(c => c.id === currentClientId);
+            if (client) {
+                document.getElementById('editClientName').value = client.name;
+                document.getElementById('editClientNameModal').style.display = 'block';
+            }
+        }
+
+        function closeEditClientNameModal() {
+            document.getElementById('editClientNameModal').style.display = 'none';
+        } 
+        
+        function updateClientName() {
+            const newName = document.getElementById('editClientName').value.trim();
+            if (!newName) {
+                alert('يرجى إدخال اسم صالح');
+                return;
+            }
+
+            const client = clients.find(c => c.id === currentClientId);
+            if (client) {
+                client.name = newName;
+                saveData();
+                closeEditClientNameModal();
+                alert('تم تعديل الاسم بنجاح');
+                showClientTransactions(currentClientId); // إعادة تحميل الصفحة
+                updateStats();
+            }
+        }
+
+        // ===== تحديث العملية =====
+        function updateTransaction() {
+            const amountInput = document.getElementById('editAmount');
+            const notesInput = document.getElementById('editNotes');
+            const isPaymentCheckbox = document.getElementById('editisPayment');
+
+            const rawAmount = parseFloat(amountInput.value);
+            const notes = notesInput.value.trim();
+            const isPayment = isPaymentCheckbox.checked;
+
+            if (isNaN(rawAmount) || !notes) {
+                alert('يرجى ملء جميع الحقول بشكل صحيح');
+                return;
+            }
+
+            const updatedAmount = isPayment ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+
+            const transactionIndex = transactions.findIndex(t => t.id === currentTransactionId);
+            if (transactionIndex !== -1) {
+                const oldAmount = transactions[transactionIndex].amount;
+                transactions[transactionIndex].amount = updatedAmount;
+                transactions[transactionIndex].notes = notes;
+
+                const client = clients.find(c => c.id === transactions[transactionIndex].clientId);
+                if (client) {
+                    // نضيف الفرق الحقيقي بين القيمة الجديدة والقديمة
+                    client.currentDebt += (updatedAmount - oldAmount);
+                }
+
+                saveData();
+                closeModal();
+                alert('تم تحديث العملية بنجاح');
+
+                if (currentClientId) {
+                    showClientTransactions(currentClientId);
+                } else {
+                    displayTransactions();
+                }
+                updateStats();
+            }
+        }
+
+        // ===== إغلاق نافذة التعديل =====
+        function closeModal() {
+            document.getElementById('editTransactionModal').style.display = 'none';
+        }
+
+        // ===== فلترة الزبائن =====
+        function filterClients() {
+            const searchText = document.getElementById('searchClient').value.toLowerCase();
+            const clientItems = document.querySelectorAll('#clientsList .list-item');
+            
+            clientItems.forEach(item => {
+                const clientName = item.querySelector('.client-name').textContent.toLowerCase();
+                if (clientName.includes(searchText)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // ===== فلترة العمليات =====
+        function filterTransactions() {
+            const searchText = document.getElementById('searchTransaction').value.toLowerCase();
+            const transactionItems = document.querySelectorAll('#transactionsList .list-item');
+            
+            transactionItems.forEach(item => {
+                const itemText = item.textContent.toLowerCase();
+                if (itemText.includes(searchText)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // ===== تحديث الإحصائيات =====
+        function updateStats() {
+            document.getElementById('totalClients').textContent = clients.length;
+            
+            const totalDebt = clients.reduce((sum, client) => sum + client.currentDebt, 0);
+            document.getElementById('totalDebt').textContent = totalDebt.toFixed(2);
+        }
+
+        // ===== حفظ البيانات في localStorage =====
+        function saveData() {
+            localStorage.setItem('debtClients', JSON.stringify(clients));
+            localStorage.setItem('debtTransactions', JSON.stringify(transactions));
+        }
+
+        // ===== إغلاق التطبيق =====
+        function closeApp() {
+            if (confirm('هل تريد إغلاق التطبيق؟')) {
+                // في تطبيق ويب عادي
+                window.close();
+                // في تطبيق محول إلى APK، هذا سيعتمد على البيئة
+            }
+        }
+
+        // ===== منع إغلاق الصفحة意外ي =====
+        window.addEventListener('beforeunload', function (e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        // ===== وظائف استيراد وتصدير الملفات =====
+        function setupFileButtons() {
+            // استيراد ودمج ملف JSON
+            document.getElementById('mergeFileBtn').addEventListener('click', async () => {
+                const input = document.getElementById('importFile');
+                if (!input.files || !input.files[0]) return alert('اختر ملف JSON أولاً');
+                try {
+                    const text = await input.files[0].text();
+                    const parsed = JSON.parse(text);
+
+                    // تحقق من البنية المتوقعة
+                    const incomingClients = Array.isArray(parsed.clients) ? parsed.clients : [];
+                    const incomingTransactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+
+                    // دمج العملاء: إذا كان id متطابق لا تضيف، إن أردت استبدال الاسم يمكن ضبط ذلك هنا
+                    const existingClientIds = new Set(clients.map(c => c.id));
+                    incomingClients.forEach(ic => {
+                        if (!existingClientIds.has(ic.id)) {
+                            clients.push(ic);
+                        } else {
+                            // مثال: تحديث الاسم والدين إن رغبت (التعديل اختياري)
+                            const existing = clients.find(c => c.id === ic.id);
+                            if (existing) {
+                                // خيار 1: لا تفعل شيء (تجاهل الملف) — افعل nothing
+                                // خيار 2: استبدل البيانات بأحدث من الملف:
+                                // existing.name = ic.name;
+                                // existing.currentDebt = ic.currentDebt;
+                            }
+                        }
+                    });
+
+                    // دمج العمليات: تجنّب التكرار حسب id
+                    const existingTxnIds = new Set(transactions.map(t => t.id));
+                    incomingTransactions.forEach(it => {
+                        if (!existingTxnIds.has(it.id)) {
+                            transactions.push(it);
+                        }
+                    });
+
+                    // بعد الدمج: حفظ وإعادة تحميل الواجهة
+                    saveData();
+                    updateStats();
+                    displayClients();
+                    displayTransactions();
+                    alert('تم استيراد ودمج البيانات بنجاح');
+                } catch (e) {
+                    console.error('فشل قراءة أو تحليل الملف', e);
+                    alert('فشل قراءة الملف أو تنسيقه غير صحيح JSON');
+                }
+            });
+
+            // تصدير البيانات إلى ملف JSON
+            document.getElementById('exportFileBtn').addEventListener('click', () => {
+                exportDataToFile();
+            });
+        }
+
+        // ===== توليد اسم ملف مع طابع زمني =====
+        function makeBackupFilename() {
+            const now = new Date();
+            const ts = now.toISOString().replace(/[:.]/g, '-'); // صالح كاسم ملف
+            return `debt_backup_${ts}.json`;
+        }
+
+        // ===== دالة تصدير البيانات الحالية كملف JSON وتنزيله =====
+        // ===== دالة تصدير معدلة للعمل على APK =====
+function exportDataToFile(filename = null) {
+    const data = {
+        clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
+        transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
+        exportedAt: new Date().toISOString()
+    };
+
+    const jsonString = JSON.stringify(data, null, 2);
+    
+    // محاولة التنزيل العادي (للمتصفحات)
+    try {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || makeBackupFilename();
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        console.log('الطريقة العادية فشلت، استخدام طريقة المشاركة');
+    }
+    
+    // طريقة المشاركة للـ APK
+    shareData(jsonString, filename);
+}
+
+// ===== دالة المشاركة للـ APK =====
+function shareData(jsonString, filename = null) {
+    // إنشاء Blob
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    
+    // إنشاء URL للـ Blob
+    const url = URL.createObjectURL(blob);
+    
+    // اسم الملف الافتراضي
+    const finalFilename = filename || makeBackupFilename();
+    
+    // محاولة استخدام Web Share API إذا متاح
+    if (navigator.share && navigator.canShare) {
+        try {
+            const file = new File([blob], finalFilename, { type: 'application/json' });
+            
+            if (navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'تصدير بيانات دفتر الديون',
+                    text: 'البيانات المصدرة من تطبيق دفتر الديون'
+                }).then(() => {
+                    alert('✅ تم تصدير البيانات ومشاركتها بنجاح');
+                }).catch((error) => {
+                    console.log('مشاركة فشلت:', error);
+                    showAlternativeOptions(url, finalFilename);
+                });
+            } else {
+                showAlternativeOptions(url, finalFilename);
+            }
+        } catch (error) {
+            console.log('Web Share API غير مدعوم:', error);
+            showAlternativeOptions(url, finalFilename);
+        }
+    } else {
+        showAlternativeOptions(url, finalFilename);
+    }
+}
+
+// ===== عرض خيارات بديلة =====
+function showAlternativeOptions(url, filename) {
+    // إنشاء واجهة بديلة للتنزيل
+    const downloadDiv = document.createElement('div');
+    downloadDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 10000;
+        text-align: center;
+        max-width: 90%;
+    `;
+    
+    downloadDiv.innerHTML = `
+        <h3 style="color: #2E8B57; margin-bottom: 15px;">تصدير البيانات</h3>
+        <p style="margin-bottom: 15px;">اختر طريقة لتصدير البيانات:</p>
+        
+        <button onclick="copyToClipboard()" style="
+            background: #87CEEB;
+            color: black;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        ">نسخ البيانات للنصوص</button>
+        
+        <button onclick="openInNewTab('${url}')" style="
+            background: #2E8B57;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        ">فتح البيانات في نافذة جديدة</button>
+        
+        <button onclick="saveToLocalStorage()" style="
+            background: #FF4444;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        ">حفظ كنسخة احتياطية داخل التطبيق</button>
+        
+        <button onclick="this.parentElement.remove()" style="
+            background: #CCCCCC;
+            color: black;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        ">إلغاء</button>
+    `;
+    
+    document.body.appendChild(downloadDiv);
+}
+
+// ===== الخيارات البديلة =====
+function copyToClipboard() {
+    const data = {
+        clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
+        transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
+        exportedAt: new Date().toISOString()
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    
+    navigator.clipboard.writeText(jsonString).then(() => {
+        alert('✅ تم نسخ البيانات إلى الحافظة\nيمكنك لصقها في أي تطبيق ملاحظات');
+        document.querySelector('div').remove();
+    }).catch(() => {
+        // طريقة بديلة للنسخ
+        const textArea = document.createElement('textarea');
+        textArea.value = jsonString;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('✅ تم نسخ البيانات إلى الحافظة');
+        document.querySelector('div').remove();
+    });
+}
+
+function openInNewTab(url) {
+    const newWindow = window.open(url, '_blank');
+    if (newWindow) {
+        alert('✅ تم فتح البيانات في نافذة جديدة\nيمكنك نسخ المحتوى يدوياً');
+    }
+    document.querySelector('div').remove();
+}
+
+function saveToLocalStorage() {
+    const data = {
+        clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
+        transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
+        backupDate: new Date().toLocaleString('ar-EG')
+    };
+    
+    localStorage.setItem('debtManualBackup', JSON.stringify(data));
+    localStorage.setItem('lastBackupTime', new Date().toISOString());
+    
+    alert('✅ تم حفظ نسخة احتياطية داخل التطبيق\nيمكنك استعادتها لاحقاً');
+    document.querySelector('div').remove();
+}
+
+// ===== دالة استعادة النسخة الاحتياطية =====
+function restoreFromBackup() {
+    const backup = localStorage.getItem('debtManualBackup');
+    if (!backup) {
+        alert('❌ لا توجد نسخة احتياطية محفوظة');
+        return;
+    }
+    
+    if (confirm('هل تريد استعادة النسخة الاحتياطية؟ سيتم استبدال جميع البيانات الحالية.')) {
+        try {
+            const data = JSON.parse(backup);
+            clients = data.clients || [];
+            transactions = data.transactions || [];
+            saveData();
+            updateStats();
+            displayClients();
+            displayTransactions();
+            alert('✅ تم استعادة النسخة الاحتياطية بنجاح');
+        } catch (error) {
+            alert('❌ فشل استعادة النسخة الاحتياطية');
+        }
+    }
+}
+
+        // ===== وظائف Google Drive =====
+        function setupGoogleDriveButtons() {
+            document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleAuth);
+            document.getElementById('syncDriveBtn').addEventListener('click', syncWithDrive);
+            document.getElementById('importDriveBtn').addEventListener('click', importFromDrive);
+        }
+
+        // ===== المصادقة مع Google =====
+        // ===== مصادقة Google - إصدار محسن =====
+function handleGoogleAuth() {
+    // 🔽 🔽 🔽 استبدل هذا بـ CLIENT_ID الحقيقي لمشروعك 🔽 🔽 🔽
+    const CLIENT_ID = '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com';
+    
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+    console.log('بدء تحميل مكتبة Google...');
+    
+    gapi.load('client:auth2', {
+        callback: function() {
+            console.log('جاري تهيئة العميل...');
+            
+            gapi.client.init({
+                clientId: CLIENT_ID,
+                scope: SCOPES,
+            }).then(function() {
+                console.log('التهيئة نجحت');
+                const authInstance = gapi.auth2.getAuthInstance();
+                
+                if (!authInstance.isSignedIn.get()) {
+                    console.log('جاري تسجيل الدخول...');
+                    return authInstance.signIn();
+                } else {
+                    console.log('مستخدم مسجل بالفعل');
+                    return Promise.resolve(authInstance.currentUser.get());
+                }
+            }).then(function() {
+                const authInstance = gapi.auth2.getAuthInstance();
+                const user = authInstance.currentUser.get();
+                const authResponse = user.getAuthResponse();
+                
+                isGoogleAuthenticated = true;
+                googleAccessToken = authResponse.access_token;
+                
+                document.getElementById('googleAuthBtn').style.display = 'none';
+                document.getElementById('syncDriveBtn').style.display = 'inline-block';
+                document.getElementById('importDriveBtn').style.display = 'inline-block';
+                
+                alert('✅ تم تسجيل الدخول بنجاح إلى Google Drive!\nمرحباً ' + user.getBasicProfile().getName());
+                
+            }).catch(function(error) {
+                console.error('❌ خطأ:', error);
+                
+                let errorMessage = 'فشل تسجيل الدخول: ';
+                
+                if (error.error === 'popup_closed_by_user') {
+                    errorMessage += 'تم إغلاق نافذة التسجيل';
+                } else if (error.error) {
+                    errorMessage += error.error;
+                } else {
+                    errorMessage += 'تحقق من CLIENT_ID وإعدادات المشروع';
+                }
+                
+                alert(errorMessage + '\n\nتفاصيل التقنية: ' + JSON.stringify(error));
+            });
+        },
+        onerror: function() {
+            console.error('فشل تحميل مكتبة Google');
+            alert('❌ فشل تحميل مكتبة Google APIs. تحقق من اتصال الإنترنت.');
+        },
+        timeout: 10000, // 10 ثواني
+        ontimeout: function() {
+            console.error('انتهت مهلة تحميل المكتبة');
+            alert('❌ انتهت مهلة تحميل مكتبة Google.');
+        }
+    });
+}
+
+        // ===== مزامنة البيانات مع Google Drive =====
+        function syncWithDrive() {
+            if (!isGoogleAuthenticated) {
+                alert('يرجى تسجيل الدخول إلى Google Drive أولاً');
+                return;
+            }
+
+            const data = {
+                clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
+                transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
+                syncedAt: new Date().toISOString()
+            };
+
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+
+            // البحث عن ملف موجود أو إنشاء ملف جديد
+            findOrCreateDriveFile(blob).then(() => {
+                alert('تمت مزامنة البيانات مع Google Drive بنجاح');
+            }).catch(error => {
+                console.error('خطأ في المزامنة مع Drive:', error);
+                alert('فشلت مزامنة البيانات مع Google Drive');
+            });
+        }
+
+        // ===== البحث عن ملف أو إنشاء ملف جديد في Drive =====
+        function findOrCreateDriveFile(blob) {
+            return new Promise((resolve, reject) => {
+                gapi.client.drive.files.list({
+                    q: "name='debt_backup.json' and trashed=false",
+                    fields: 'files(id, name)'
+                }).then(response => {
+                    const files = response.result.files;
+                    
+                    if (files.length > 0) {
+                        // تحديث الملف الموجود
+                        updateDriveFile(files[0].id, blob).then(resolve).catch(reject);
+                    } else {
+                        // إنشاء ملف جديد
+                        createDriveFile(blob).then(resolve).catch(reject);
+                    }
+                }).catch(reject);
+            });
+        }
+
+        // ===== تحديث ملف موجود في Drive =====
+        function updateDriveFile(fileId, blob) {
+            return new Promise((resolve, reject) => {
+                const metadata = {
+                    name: 'debt_backup.json',
+                    mimeType: 'application/json'
+                };
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', blob);
+
+                fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${googleAccessToken}`
+                    },
+                    body: form
+                }).then(response => {
+                    if (response.ok) {
+                        resolve();
+                    } else {
+                        reject(new Error('فشل تحديث الملف في Drive'));
+                    }
+                }).catch(reject);
+            });
+        }
+
+        // ===== إنشاء ملف جديد في Drive =====
+        function createDriveFile(blob) {
+            return new Promise((resolve, reject) => {
+                const metadata = {
+                    name: 'debt_backup.json',
+                    mimeType: 'application/json'
+                };
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', blob);
+
+                fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${googleAccessToken}`
+                    },
+                    body: form
+                }).then(response => {
+                    if (response.ok) {
+                        resolve();
+                    } else {
+                        reject(new Error('فشل إنشاء الملف في Drive'));
+                    }
+                }).catch(reject);
+            });
+        }
+
+        // ===== استيراد البيانات من Google Drive =====
+        function importFromDrive() {
+            if (!isGoogleAuthenticated) {
+                alert('يرجى تسجيل الدخول إلى Google Drive أولاً');
+                return;
+            }
+
+            if (!confirm('سيتم استبدال جميع البيانات المحلية بالبيانات من Google Drive. هل تريد المتابعة؟')) {
+                return;
+            }
+
+            gapi.client.drive.files.list({
+                q: "name='debt_backup.json' and trashed=false",
+                fields: 'files(id, name)'
+            }).then(response => {
+                const files = response.result.files;
+                
+                if (files.length === 0) {
+                    alert('لم يتم العثور على ملف بيانات في Google Drive');
+                    return;
+                }
+
+                // تحميل الملف من Drive
+                fetch(`https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`, {
+                    headers: {
+                        'Authorization': `Bearer ${googleAccessToken}`
+                    }
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error('فشل تحميل الملف من Drive');
+                    }
+                    return response.json();
+                }).then(data => {
+                    // استبدال البيانات المحلية
+                    clients = Array.isArray(data.clients) ? data.clients : [];
+                    transactions = Array.isArray(data.transactions) ? data.transactions : [];
+                    
+                    saveData();
+                    updateStats();
+                    displayClients();
+                    displayTransactions();
+                    
+                    alert('تم استيراد البيانات من Google Drive بنجاح');
+                }).catch(error => {
+                    console.error('خطأ في استيراد البيانات من Drive:', error);
+                    alert('فشل استيراد البيانات من Google Drive');
+                });
+            }).catch(error => {
+                console.error('خطأ في البحث عن الملف في Drive:', error);
+                alert('فشل البحث عن ملف البيانات في Google Drive');
+            });
+        }
+
+
+        // رمز الامان
+function generateHourlyCode(secret = "ABC123") {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDate();
+
+    // نحول كل حرف في المفتاح إلى رقم ونجمعه مع الساعة واليوم
+    let total = 0;
+    for (let i = 0; i < secret.length; i++) {
+        total += secret.charCodeAt(i) * (hour + 1) + day;
+    }
+
+    // نحصل على آخر 6 أرقام فقط
+    const code = (total * 7).toString().slice(-6);
+    return code;
+}
+
+function isAuthenticated() {
+    return localStorage.getItem("authenticated") === "true";
+}
+
+function setAuthenticated() {
+    localStorage.setItem("authenticated", "true");
+}
+
+function verifyLogin() {
+    const code = document.getElementById("codeInput").value.trim().toUpperCase();
+    const expectedCode = generateHourlyCode();
+
+    if ( code === expectedCode) {
+        setAuthenticated();
+        document.getElementById("authModal").style.display = "none";
+        document.getElementById("appContent").style.display = "block";
+    } else {
+    document.getElementById("errorMsg").innerHTML = `
+        الرمز غير صحيح. اتصل بالمطور:
+        <br>
+        <a href="tel:+963986053607" style="display:inline-block; margin-top:10px; padding:8px 16px; background-color:#ef9a9a; color:#000; border-radius:5px; text-decoration:none;">
+             اتصل الآن و اشتري الاشتراك ب 2 دولار فقط
+        </a>
+    `;
+}
+
+
+}
+
+window.onload = () => {
+    if (isAuthenticated()) {
+        document.getElementById("authModal").style.display = "none";
+        document.getElementById("appContent").style.display = "block";
+    }
+};
+
+//تاريخ اخر دفعة 
+function getLastPaymentDate(clientId) {
+  const payments = transactions
+    .filter(t => t.clientId === clientId && t.amount < 0)
+    .map(t => new Date(t.dateTime));
+
+  if (payments.length === 0) return null;
+
+  return payments.reduce((latest, current) => current > latest ? current : latest);
+}
+//فلترة الاسماء حسب التاريخ
+function getDebtorsByPeriod(daysThreshold) {
+  const now = new Date();
+
+  return clients.filter(client => {
+    if (client.currentDebt <= 0) return false;
+
+    const lastPayment = getLastPaymentDate(client.id);
+    if (!lastPayment) return true; // لم يدفع أبدًا
+
+    const diffDays = Math.floor((now - lastPayment) / (1000 * 60 * 60 * 24));
+    return diffDays >= daysThreshold;
+  });
+}
+document.getElementById('filterDebtorsBtn').onclick = () => {
+  const days = parseInt(document.getElementById('debtPeriodSelect').value);
+  const resultsDiv = document.getElementById('debtorResults');
+  resultsDiv.innerHTML = '';
+
+  const filteredClients = getDebtorsByPeriod(days);
+
+  if (filteredClients.length === 0) {
+    resultsDiv.innerHTML = '<p>لا يوجد زبائن بهذه الشروط.</p>';
+    return;
+  }
+
+  filteredClients.forEach(client => {
+    const lastPayment = getLastPaymentDate(client.id);
+    const lastDateStr = lastPayment ? lastPayment.toLocaleDateString('ar-EG') : 'لم يدفع أبدًا';
+
+    const item = document.createElement('div');
+    item.textContent = `${client.name} - دين: ${client.currentDebt} - آخر دفعة: ${lastDateStr}`;
+    resultsDiv.appendChild(item);
+  });
+};
+    </script>
+</body>
+</html>
