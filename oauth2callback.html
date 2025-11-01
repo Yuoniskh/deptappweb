@@ -1,18 +1,20 @@
-<!-- deftappweb/oauth2callback.html -->
+<!-- oauth2callback.html -->
+<!DOCTYPE html>
 <html>
-  <head><title>OAuth Callback</title></head>
+  <head>
+    <title>OAuth Callback</title>
+  </head>
   <body>
     <script>
-      // مثال بسيط: استخراج الرمز من الرابط
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       if (code) {
-        // أرسل الرمز إلى تطبيقك أو خزن التوكن
-        console.log("Auth code:", code);
-        // يمكنك إعادة التوجيه أو إغلاق النافذة
+        console.log("Received auth code:", code);
+        // يمكنك إرسال الرمز إلى خادم أو تخزينه مؤقتًا
       } else {
         console.error("No auth code found");
       }
     </script>
+    <p>تمت المصادقة، يمكنك إغلاق هذه الصفحة.</p>
   </body>
 </html>
