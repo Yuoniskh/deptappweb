@@ -1451,36 +1451,56 @@ function restoreFromBackup() {
         // ===== المصادقة مع Google =====
         // ===== مصادقة Google - إصدار محسن =====
         function handleGoogleAuth() {
-    console.log('🚀 جاري تسجيل الدخول...');
+    console.log('🔐 محاولة تسجيل الدخول...');
     
-    // الطريقة الحديثة - أسهل وأضمن
-    const client = google.accounts.oauth2.initTokenClient({
-        client_id: '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: (response) => {
-            if (response.access_token) {
-                // نجحت المصادقة
-                googleAccessToken = response.access_token;
-                isGoogleAuthenticated = true;
+    // استخدم الطريقة الأبسط مباشرة
+    if (typeof google === 'undefined') {
+        alert('⏳ مكتبة Google لم تحمل بعد. انتظر قليلاً ثم حاول مرة أخرى.');
+        return;
+    }
+
+    try {
+        const client = google.accounts.oauth2.initTokenClient({
+            client_id: '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com',
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: (response) => {
+                if (response && response.access_token) {
+                    // نجحت المصادقة!
+                    googleAccessToken = response.access_token;
+                    isGoogleAuthenticated = true;
+                    
+                    document.getElementById('googleAuthBtn').style.display = 'none';
+                    document.getElementById('syncDriveBtn').style.display = 'inline-block';
+                    document.getElementById('importDriveBtn').style.display = 'inline-block';
+                    
+                    alert('🎉 تم تسجيل الدخول بنجاح!');
+                    console.log('✅ Token received');
+                } else {
+                    alert('❌ لم يتم الحصول على رمز الوصول');
+                }
+            },
+            error_callback: (error) => {
+                console.error('🔴 خطأ المصادقة:', error);
                 
-                // تحديث الواجهة
-                document.getElementById('googleAuthBtn').style.display = 'none';
-                document.getElementById('syncDriveBtn').style.display = 'inline-block';
-                document.getElementById('importDriveBtn').style.display = 'inline-block';
-                
-                alert('✅ تم تسجيل الدخول بنجاح!');
-                console.log('🔑 Token:', response.access_token);
-            } else {
-                alert('❌ فشل المصادقة');
+                if (error.type === 'popup_closed') {
+                    alert(`⚠️ النافذة أغلقت بسرعة. هذا يعني:
+                    
+1. تأكد من إضافة النطاقات في Google Cloud Console
+2. جرب متصفح مختلف
+3. قد تحتاج لتفعيل الطرف الثالث في إعدادات المتصفح`);
+                } else {
+                    alert('❌ خطأ: ' + JSON.stringify(error));
+                }
             }
-        },
-        error_callback: (error) => {
-            console.error('خطأ:', error);
-            alert('❌ خطأ في المصادقة: ' + JSON.stringify(error));
-        }
-    });
-    
-    client.requestAccessToken();
+        });
+        
+        console.log('🔄 طلب token...');
+        client.requestAccessToken();
+        
+    } catch (error) {
+        console.error('🔴 خطأ في الدالة:', error);
+        alert('❌ خطأ غير متوقع: ' + error.message);
+    }
 }
 
         // ===== مزامنة البيانات مع Google Drive =====
