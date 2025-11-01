@@ -1451,11 +1451,10 @@ function restoreFromBackup() {
         // ===== المصادقة مع Google =====
         // ===== مصادقة Google - إصدار محسن =====
         function handleGoogleAuth() {
-    console.log('🔐 محاولة تسجيل الدخول...');
+    console.log('🔐 جاري فتح نافذة المصادقة...');
     
-    // استخدم الطريقة الأبسط مباشرة
     if (typeof google === 'undefined') {
-        alert('⏳ مكتبة Google لم تحمل بعد. انتظر قليلاً ثم حاول مرة أخرى.');
+        alert('⏳ جاري تحميل مكتبة Google...');
         return;
     }
 
@@ -1463,6 +1462,7 @@ function restoreFromBackup() {
         const client = google.accounts.oauth2.initTokenClient({
             client_id: '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com',
             scope: 'https://www.googleapis.com/auth/drive.file',
+            prompt: 'consent', // 🔥 هذا السطر مهم - يجبر ظهور النافذة
             callback: (response) => {
                 if (response && response.access_token) {
                     // نجحت المصادقة!
@@ -1474,7 +1474,13 @@ function restoreFromBackup() {
                     document.getElementById('importDriveBtn').style.display = 'inline-block';
                     
                     alert('🎉 تم تسجيل الدخول بنجاح!');
-                    console.log('✅ Token received');
+                    console.log('✅ Token:', response.access_token.substring(0, 20) + '...');
+                    
+                    // جرب مزامنة فورية للتأكد
+                    setTimeout(() => {
+                        syncWithDrive();
+                    }, 1000);
+                    
                 } else {
                     alert('❌ لم يتم الحصول على رمز الوصول');
                 }
@@ -1483,18 +1489,14 @@ function restoreFromBackup() {
                 console.error('🔴 خطأ المصادقة:', error);
                 
                 if (error.type === 'popup_closed') {
-                    alert(`⚠️ النافذة أغلقت بسرعة. هذا يعني:
-                    
-1. تأكد من إضافة النطاقات في Google Cloud Console
-2. جرب متصفح مختلف
-3. قد تحتاج لتفعيل الطرف الثالث في إعدادات المتصفح`);
+                    alert('⚠️ تم إغلاق النافذة. جرب مرة أخرى واتركها مفتوحة.');
                 } else {
                     alert('❌ خطأ: ' + JSON.stringify(error));
                 }
             }
         });
         
-        console.log('🔄 طلب token...');
+        console.log('🔄 طلب token مع prompt...');
         client.requestAccessToken();
         
     } catch (error) {
