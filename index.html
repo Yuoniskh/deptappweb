@@ -1449,71 +1449,70 @@ function restoreFromBackup() {
 
         // ===== المصادقة مع Google =====
         // ===== مصادقة Google - إصدار محسن =====
-function handleGoogleAuth() {
-    // 🔽 🔽 🔽 استبدل هذا بـ CLIENT_ID الحقيقي لمشروعك 🔽 🔽 🔽
-    const CLIENT_ID = '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com';
+        function handleGoogleAuth() {
+    console.log('🚀 بدء المصادقة من GitHub Pages...');
     
+    const CLIENT_ID = '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-    console.log('بدء تحميل مكتبة Google...');
-    
+    // تحميل المكتبة أولاً
+    if (typeof gapi === 'undefined') {
+        console.error('❌ مكتبة Google APIs غير محملة');
+        alert('جاري تحميل مكتبة Google... حاول مرة أخرى بعد ثوانٍ');
+        return;
+    }
+
     gapi.load('client:auth2', {
         callback: function() {
-            console.log('جاري تهيئة العميل...');
+            console.log('📚 المكتبة محملة، جاري التهيئة...');
             
             gapi.client.init({
                 clientId: CLIENT_ID,
                 scope: SCOPES,
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                ux_mode: 'popup', // مهم لـ GitHub Pages
+                redirect_uri: 'https://yuoniskh.github.io/deptappweb'
             }).then(function() {
-                console.log('التهيئة نجحت');
+                console.log('✅ التهيئة نجحت');
                 const authInstance = gapi.auth2.getAuthInstance();
                 
                 if (!authInstance.isSignedIn.get()) {
-                    console.log('جاري تسجيل الدخول...');
+                    console.log('🔐 فتح نافذة المصادقة...');
                     return authInstance.signIn();
-                } else {
-                    console.log('مستخدم مسجل بالفعل');
-                    return Promise.resolve(authInstance.currentUser.get());
                 }
-            }).then(function() {
-                const authInstance = gapi.auth2.getAuthInstance();
-                const user = authInstance.currentUser.get();
-                const authResponse = user.getAuthResponse();
+                return Promise.resolve(authInstance.currentUser.get());
                 
+            }).then(function(user) {
+                console.log('✅ المصادقة ناجحة');
                 isGoogleAuthenticated = true;
-                googleAccessToken = authResponse.access_token;
+                googleAccessToken = user.getAuthResponse().access_token;
                 
+                // تحديث الواجهة
                 document.getElementById('googleAuthBtn').style.display = 'none';
                 document.getElementById('syncDriveBtn').style.display = 'inline-block';
                 document.getElementById('importDriveBtn').style.display = 'inline-block';
                 
-                alert('✅ تم تسجيل الدخول بنجاح إلى Google Drive!\nمرحباً ' + user.getBasicProfile().getName());
+                alert('✅ تم تسجيل الدخول بنجاح!');
                 
             }).catch(function(error) {
-                console.error('❌ خطأ:', error);
+                console.error('❌ خطأ في المصادقة:', error);
+                let errorMsg = 'فشل التسجيل: ';
                 
-                let errorMessage = 'فشل تسجيل الدخول: ';
-                
-                if (error.error === 'popup_closed_by_user') {
-                    errorMessage += 'تم إغلاق نافذة التسجيل';
-                } else if (error.error) {
-                    errorMessage += error.error;
+                if (error.error === 'idpiframe_initialization_failed') {
+                    errorMsg += 'تحقق من إضافة "https://yuoniskh.github.io" إلى URIs المسموحة في Google Cloud Console';
+                } else if (error.error === 'popup_closed_by_user') {
+                    errorMsg += 'تم إغلاق النافذة';
                 } else {
-                    errorMessage += 'تحقق من CLIENT_ID وإعدادات المشروع';
+                    errorMsg += error.error || error.message;
                 }
                 
-                alert(errorMessage + '\n\nتفاصيل التقنية: ' + JSON.stringify(error));
+                alert(errorMsg);
             });
         },
         onerror: function() {
-            console.error('فشل تحميل مكتبة Google');
-            alert('❌ فشل تحميل مكتبة Google APIs. تحقق من اتصال الإنترنت.');
+            alert('❌ فشل تحميل مكتبة Google APIs');
         },
-        timeout: 10000, // 10 ثواني
-        ontimeout: function() {
-            console.error('انتهت مهلة تحميل المكتبة');
-            alert('❌ انتهت مهلة تحميل مكتبة Google.');
-        }
+        timeout: 10000
     });
 }
 
