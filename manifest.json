@@ -1,15 +1,18 @@
 {
+  "id": "com.yuoniskh.financialmanager",
   "name": "مدير مالي",
   "short_name": "Financial Manager",
   "description": "تطبيق لإدارة الديون والمعاملات المالية الشخصية",
-  "start_url": "./index.html",
+  "version": "1.7.6",
+  "start_url": "/deptappweb/index.html",
+  "scope": "/deptappweb/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2c3e50",
   "orientation": "portrait",
   "lang": "ar",
   "dir": "rtl",
-  "version": "1.7.5",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -20,6 +23,20 @@
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/screen1.png",
+      "sizes": "640x480",
+      "type": "image/png",
+      "label": "واجهة التطبيق الرئيسية"
+    },
+    {
+      "src": "screenshots/screen2.png",
+      "sizes": "640x480",
+      "type": "image/png",
+      "label": "إدارة الديون والمعاملات"
     }
   ]
 }
