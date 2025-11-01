@@ -1,0 +1,25 @@
+{
+  "name": "مدير مالي",
+  "short_name": "Financial Manager",
+  "description": "تطبيق لإدارة الديون والمعاملات المالية الشخصية",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "version": "1.7.5",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
