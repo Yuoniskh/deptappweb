@@ -14,7 +14,8 @@
    </script>
     <!-- استيراد مكتبة Google APIs للتعامل مع Google Drive -->
     <script src="https://apis.google.com/js/api.js"></script>
-    
+    <!-- تحت سكريبت Google APIs -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         /* ===== إعدادات عامة ===== */
         * {
@@ -1450,42 +1451,17 @@ function restoreFromBackup() {
         // ===== المصادقة مع Google =====
         // ===== مصادقة Google - إصدار محسن =====
         function handleGoogleAuth() {
-    console.log('🚀 بدء المصادقة من GitHub Pages...');
+    console.log('🚀 جاري تسجيل الدخول...');
     
-    const CLIENT_ID = '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-    // تحميل المكتبة أولاً
-    if (typeof gapi === 'undefined') {
-        console.error('❌ مكتبة Google APIs غير محملة');
-        alert('جاري تحميل مكتبة Google... حاول مرة أخرى بعد ثوانٍ');
-        return;
-    }
-
-    gapi.load('client:auth2', {
-        callback: function() {
-            console.log('📚 المكتبة محملة، جاري التهيئة...');
-            
-            gapi.client.init({
-                clientId: CLIENT_ID,
-                scope: SCOPES,
-                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                ux_mode: 'popup', // مهم لـ GitHub Pages
-                redirect_uri: 'https://yuoniskh.github.io/deptappweb'
-            }).then(function() {
-                console.log('✅ التهيئة نجحت');
-                const authInstance = gapi.auth2.getAuthInstance();
-                
-                if (!authInstance.isSignedIn.get()) {
-                    console.log('🔐 فتح نافذة المصادقة...');
-                    return authInstance.signIn();
-                }
-                return Promise.resolve(authInstance.currentUser.get());
-                
-            }).then(function(user) {
-                console.log('✅ المصادقة ناجحة');
+    // الطريقة الحديثة - أسهل وأضمن
+    const client = google.accounts.oauth2.initTokenClient({
+        client_id: '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (response) => {
+            if (response.access_token) {
+                // نجحت المصادقة
+                googleAccessToken = response.access_token;
                 isGoogleAuthenticated = true;
-                googleAccessToken = user.getAuthResponse().access_token;
                 
                 // تحديث الواجهة
                 document.getElementById('googleAuthBtn').style.display = 'none';
@@ -1493,27 +1469,18 @@ function restoreFromBackup() {
                 document.getElementById('importDriveBtn').style.display = 'inline-block';
                 
                 alert('✅ تم تسجيل الدخول بنجاح!');
-                
-            }).catch(function(error) {
-                console.error('❌ خطأ في المصادقة:', error);
-                let errorMsg = 'فشل التسجيل: ';
-                
-                if (error.error === 'idpiframe_initialization_failed') {
-                    errorMsg += 'تحقق من إضافة "https://yuoniskh.github.io" إلى URIs المسموحة في Google Cloud Console';
-                } else if (error.error === 'popup_closed_by_user') {
-                    errorMsg += 'تم إغلاق النافذة';
-                } else {
-                    errorMsg += error.error || error.message;
-                }
-                
-                alert(errorMsg);
-            });
+                console.log('🔑 Token:', response.access_token);
+            } else {
+                alert('❌ فشل المصادقة');
+            }
         },
-        onerror: function() {
-            alert('❌ فشل تحميل مكتبة Google APIs');
-        },
-        timeout: 10000
+        error_callback: (error) => {
+            console.error('خطأ:', error);
+            alert('❌ خطأ في المصادقة: ' + JSON.stringify(error));
+        }
     });
+    
+    client.requestAccessToken();
 }
 
         // ===== مزامنة البيانات مع Google Drive =====
