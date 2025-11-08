@@ -827,12 +827,12 @@ justify-content: center;
                         <h3>🔄 دمج ملفات</h3>
                         <p>إضافة بيانات من ملف JSON دون حذف البيانات الحالية</p>
                         <input type="file" id="mergeFileInput" accept=".json" style="display:none;">
-                        <button class="btn btn-primary" onclick="document.getElementById('mergeFileInput').click()">
-                            اختيار ملف للدمج
+                        <input type="file" id="importFile" accept=".json" style="display:none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">
+                            استيراد ملف
                         </button>
-                        <button class="btn btn-secondary" onclick="handleFileMerge()" style="margin-top: 10px;">
-                            دمج البيانات
-                        </button>
+		<button class="btn btn-secondary" id="mergeFileBtn">دمج ملف JSON</button>
+                
                     </div>
                     
                     <div class="option-group">
