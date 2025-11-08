@@ -6,16 +6,39 @@
     <title>دفتر الديون - إدارة الديون والعملاء</title>
     <link rel="manifest" href="manifest.json">
     <script>
-  	if ('serviceWorker' in navigator) {
-    	navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('Service Worker registered'))
-      .catch(err => console.error('Service Worker error:', err));
-  	}
-   </script>
+        // تحديث Service Worker وإعادة التثبيت عند التحديث
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/deptappweb/service-worker.js')
+              .then(function(registration) {
+                console.log('ServiceWorker registered');
+                
+                // التحقق من التحديثات
+                registration.addEventListener('updatefound', () => {
+                  const newWorker = registration.installing;
+                  console.log('New update found!');
+                  
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      console.log('New content available; please refresh.');
+                      // إعادة تحميل الصفحة لتطبيق التحديث
+                      window.location.reload();
+                    }
+                  });
+                });
+              })
+              .catch(function(error) {
+                console.log('ServiceWorker registration failed: ', error);
+              });
+          });
+        }
+        </script>
     <!-- استيراد مكتبة Google APIs للتعامل مع Google Drive -->
     <script src="https://apis.google.com/js/api.js"></script>
     <!-- تحت سكريبت Google APIs -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- استيراد مكتبة Google APIs للتعامل مع Google Drive -->
+<script src="https://apis.google.com/js/api.js?onload=onGapiLoad"></script>
     <style>
         /* ===== إعدادات عامة ===== */
         * {
@@ -441,31 +464,98 @@ justify-content: center;
     background-color: #80cbc4;
 }
 
+/* ===== أنماط النوافذ المنبثقة الجديدة ===== */
+.export-options, .import-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.option-group {
+    background: var(--light-green);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.option-group h3 {
+    color: var(--primary-green);
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+.option-group p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.option-group .btn {
+    width: 100%;
+    margin: 5px 0;
+}
+
+.import-status {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+}
+
+.import-status.success {
+    background: #d1edff;
+    border: 1px solid #b3d9ff;
+    color: #004085;
+}
+
+.import-status.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
 
     </style>
 </head>
 <body>
     <!-- نافذة التحقق -->
-<div id="authModal">
-    <div class="auth-box">
-        <h3>تسجيل الدخول<br>
-       اتصل بالمطور عبر الرقم -2$<br>963986053607+</h3>
-        
-        <input type="text" id="codeInput" placeholder="رمز التحقق">
-        <button onclick="verifyLogin()">دخول</button>
-        <div id="errorMsg"></div>
+    <div id="authModal">
+        <div class="auth-box">
+            <h3>تسجيل الدخول</h3>
+            <p style="margin: 10px 0; color: #666; font-size: 14px;">
+                اتصل بالمطور: 963986053607+
+            </p>
+    
+            <!-- الدخول برمز التحقق -->
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="codeInput" placeholder="رمز التحقق" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                <button onclick="verifyLogin()" style="width: 100%; padding: 10px; background: #2E8B57; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    دخول برمز التحقق
+                </button>
+            </div>
+    
+            <!-- فاصل -->
+            <div style="text-align: center; margin: 15px 0; color: #888;">
+                ─── أو ───
+            </div>
+    
+            <!-- الدخول بـ Google -->
+            <button class="btn-mini google" id="googleAuthBtn" onclick="showRefreshMessage()">
+                لدي حساب بالفعل 
+            </button>
+            <p id="refreshMessage" style="text-align: center; margin: 15px 0; color: #690909; display: none;">
+                حدث الصفحة او قم بإعادة تشغيل التطبيق حتى يفتح بعد تسجيل الدخول من حسابك
+            </p>
+            <div id="errorMsg" style="margin-top: 15px; min-height: 40px;"></div>
+        </div>
     </div>
-</div>
-
-
     <!-- ===== حاوية التطبيق الرئيسية ===== -->
     <div class="container">
         
         <!-- ===== الشاشة الرئيسية ===== -->
         <div id="mainScreen" class="screen active">
             <div class="header">
-                <h1>دفتر الديون</h1>
-                <button onclick="showInfoModal()" id = "versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;" >v2.0.1</button>
+                <h1>لا تنسوا عمل تصدير للبيانات </h1>
+                <button onclick="showInfoModal()" id = "versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;" >v2.3.0</button>
             </div>
 
             <div class="stats">
@@ -485,29 +575,25 @@ justify-content: center;
             <button class="btn" onclick="showScreen('transactionsScreen')">عرض سجل العمليات</button>
             <button id="showOldDebtsBtn" class="btn btn-warning">عرض الزبائن الذين تأخروا في الدفع</button>
             
+               
                <!-- ===== أزرار الأدوات السفلية ===== -->
-               <div class="tool-bar" id="utilityToolbar">
-                <!-- قبل التسجيل -->
+            <div class="tool-bar" id="utilityToolbar">
+                <!-- أزرار رئيسية -->
+                <button class="btn-mini primary" onclick="openExportModal()">
+                    📤 تصدير بيانات
+                </button>
+                
+                <button class="btn-mini secondary" onclick="openImportModal()">
+                    📥 استيراد بيانات
+                </button>
+                
+                <!-- أزرار Google - تبقى كما هي -->
                 <button class="btn-mini google" id="googleAuthBtn" onclick="handleGoogleAuth()">
                     تسجيل الدخول بـ Google
                 </button>
                 
-                <!-- بعد التسجيل -->
-                <button class="btn-mini primary" id="syncDriveBtn" onclick="syncWithDrive()" style="display:none;">
-                    🔼 رفع إلى Drive
-                </button>
-                <button class="btn-mini secondary" id="importDriveBtn" onclick="importFromDrive()" style="display:none;">
-                    🔽 استيراد من Drive
-                </button>
-                
-                <!-- باقي الأزرار -->
-                <input type="file" id="importFile" accept=".json" style="display:none;">
-		<button class="btn-mini secondary" id="mergeFileBtn">دمج ملف JSON</button>
-                <button class="btn-mini" onclick="document.getElementById('importFile').click()">
-                    استيراد ملف
-                </button>
-                <button class="btn-mini primary" onclick="exportDataToFile()">
-                    تصدير بيانات
+                <button class="btn-mini danger" id="logoutBtn" onclick="handleGoogleLogout()" style="display:none;">
+                    🚪 تسجيل الخروج
                 </button>
             </div>
 
@@ -660,20 +746,22 @@ justify-content: center;
             </div>
         </div>
     </div>
+    
     <div id="infoModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeInfoModal()">×</span>
             <h2>حول التطبيق</h2>
-            <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 2.0.1<br> .*تحسينات أمنية و تطبيق مستقر اكثر,<br>*اضافة اتصال مع غوغل <br>*ميزة تصدير سريع <br>*اصبحنا مستقلين<br>*التحديثات باتت تلقائية مجرد الاتصال</p>
+            <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 2.3.0<br>*تحسينات أمنية و تطبيق مستقر اكثر <br>*اتصال مستقر مع غوغل <br>*تصدير و استيراد إلى غوغل درايف <br>*يمكنك فتح الحساب نفسه على اكثر من جهاز </p>
             <div class="stats">
-                <a  href="https://www.facebook.com/younismkh" target="_blank"><button class="btn-danger">facebook</button></a>
+                <a  href="https://www.facebook.com/younismkh" target="_blank"><button class="btn-danger"><img src="icons/fb.png" alt="facebook"></button></a>
 
-                <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.0.1..." ><button class="btn-mini">بريد الدعم و الشكوى</button></a>
+                <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.3.0..." ><button class="btn-mini">بريد الدعم و الشكوى</button></a>
                 
-                <a  href="https://www.youtube.com/@youniskhezaran9863" target="_blank"><button class="btn-danger">youtube</button></a>
+                <a  href="https://www.youtube.com/@youniskhezaran9863" target="_blank"><button class="btn-danger"><img src="icons/yb.png" alt="youtube"></button></a>
             </div>
         </div>
     </div>
+
     <div id="oldDebtsModal" class="modal" style="display:none;">
         <div class="modal-content">
           <span id="closeOldDebtsModal" class="close">&times;</span>
@@ -688,10 +776,88 @@ justify-content: center;
           <button id="filterDebtorsBtn" class="btn btn-primary">عرض الزبائن</button>
           <div id="debtorResults" class="results"></div>
         </div>
-        
-        
-        
       </div>
+            <!-- ===== نافذة التصدير ===== -->
+        <div id="exportModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeExportModal()">&times;</span>
+                <h2 style="color: var(--primary-green); margin-bottom: 20px;">خيارات التصدير</h2>
+                
+                <div class="export-options">
+                    <div class="option-group">
+                        <h3>📁 تصدير إلى ملف</h3>
+                        <p>حفظ نسخة احتياطية من جميع البيانات في ملف JSON</p>
+                        <button class="btn btn-primary" onclick="exportDataToFile()">تصدير إلى ملف JSON</button>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h3>☁️ تصدير إلى السحابة</h3>
+                        <p>رفع البيانات إلى Google Drive (يتطلب تسجيل الدخول)</p>
+                        <button class="btn btn-primary" id="exportToDriveBtn" onclick="syncWithDrive()">رفع إلى Google Drive</button>
+                        <div id="driveExportStatus" style="margin-top: 10px; font-size: 14px;"></div>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h3>📋 نسخ إلى الحافظة</h3>
+                        <p>نسخ البيانات كنص يمكن لصقه في أي مكان</p>
+                        <button class="btn btn-secondary" onclick="copyToClipboard()">نسخ البيانات النصية</button>
+                    </div>
+                    <div class="option-group">
+                        <h3>حفظ نسخة احتياطية داخل التطبيق</h3>
+                        <p>البيانات تخزن ضمن التطبيق بطريقة اخرى ربما تنفع في حال صار نقص</p>
+                    <button onclick="saveToLocalStorage()" class="btn btn-secondary">حفظ كنسخة احتياطية داخل التطبيق</button></div>
+                    </div>
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="closeExportModal()">إغلاق</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== نافذة الاستيراد ===== -->
+        <div id="importModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeImportModal()">&times;</span>
+                <h2 style="color: var(--primary-green); margin-bottom: 20px;">خيارات الاستيراد</h2>
+                
+                <div class="import-options">
+                    
+                    
+                    <div class="option-group">
+                        <h3>🔄 دمج ملفات</h3>
+                        <p>إضافة بيانات من ملف JSON دون حذف البيانات الحالية</p>
+                        <input type="file" id="mergeFileInput" accept=".json" style="display:none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('mergeFileInput').click()">
+                            اختيار ملف للدمج
+                        </button>
+                        <button class="btn btn-secondary" onclick="handleFileMerge()" style="margin-top: 10px;">
+                            دمج البيانات
+                        </button>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h3>☁️ استيراد من السحابة</h3>
+                        <p>تحميل البيانات من Google Drive (يتطلب تسجيل الدخول)</p>
+                        <button class="btn btn-primary" id="importFromDriveBtn" onclick="importFromDrive()">
+                            استيراد من Google Drive
+                        </button>
+                        <div id="driveImportStatus" style="margin-top: 10px; font-size: 14px;"></div>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h3>💾 استعادة نسخة احتياطية</h3>
+                        <p>استعادة البيانات من النسخ الاحتياطية المحفوظة داخل التطبيق</p>
+                        <button class="btn btn-secondary" onclick="restoreFromBackup()">استعادة من النسخ الاحتياطية</button>
+                    </div>
+                </div>
+                
+                <div class="import-status" id="importStatus" style="margin-top: 20px; padding: 10px; border-radius: 5px; display: none;"></div>
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="closeImportModal()">إغلاق</button>
+                </div>
+            </div>
+        </div>
     <script>
         // ===== بيانات التطبيق =====
         let clients = JSON.parse(localStorage.getItem('debtClients')) || [];
@@ -700,24 +866,60 @@ justify-content: center;
         let currentTransactionId = null;
         let isGoogleAuthenticated = false;
         let googleAccessToken = null;
-
-        // ===== تهيئة التطبيق =====
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStats();
-            loadClientsForTransaction();
-            displayClients();
-            displayTransactions();
-            // إضافة مستمعات البحث
-            document.getElementById('searchClient').addEventListener('input', filterClients);
-            document.getElementById('searchTransaction').addEventListener('input', filterTransactions);
-            
-            // إعداد أزرار Google Drive
-            setupGoogleDriveButtons();
-            
-            // إعداد أزرار استيراد وتصدير الملفات
-            setupFileButtons();
-            // 
+        // ===== تهيئة Google APIs =====
+function initGapi() {
+    return new Promise((resolve, reject) => {
+        if (typeof gapi !== 'undefined' && gapi.client) {
+            resolve();
+            return;
+        }
+        
+        gapi.load('client', {
+            callback: function() {
+                gapi.client.init({
+                    apiKey: '',
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                }).then(() => {
+                    console.log('✅ GAPI client initialized');
+                    resolve();
+                }).catch(reject);
+            },
+            onerror: function() {
+                reject(new Error('Failed to load GAPI client'));
+            },
+            timeout: 5000,
+            ontimeout: function() {
+                reject(new Error('Timeout loading GAPI client'));
+            }
         });
+    });
+}
+        // ===== تهيئة التطبيق =====
+// ===== تهيئة التطبيق =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 بدء تهيئة التطبيق...');
+    
+    // أولاً: تحميل حالة المصادقة
+    loadAuthState();
+    
+    // ثم: تهيئة باقي التطبيق
+    updateStats();
+    loadClientsForTransaction();
+    displayClients();
+    displayTransactions();
+    
+    // إضافة مستمعات البحث
+    document.getElementById('searchClient').addEventListener('input', filterClients);
+    document.getElementById('searchTransaction').addEventListener('input', filterTransactions);
+    
+    // إعداد أزرار Google Drive
+    setupGoogleDriveButtons();
+    
+    // إعداد أزرار استيراد وتصدير الملفات
+    setupFileButtons();
+    
+    console.log('✅ تم تهيئة التطبيق بالكامل');
+});
         document.getElementById('showOldDebtsBtn').onclick = () => {
             document.getElementById('oldDebtsModal').style.display = 'block';
             };
@@ -740,6 +942,65 @@ justify-content: center;
       modal.style.display = "none";
     }
   }
+// ===== دوال النوافذ المنبثقة الجديدة =====
+function openExportModal() {
+    document.getElementById('exportModal').style.display = 'block';
+    updateExportButtons();
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+
+function openImportModal() {
+    document.getElementById('importModal').style.display = 'block';
+    updateImportButtons();
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+}
+function showRefreshMessage() {
+    // إظهار الرسالة
+    const messageElement = document.getElementById('refreshMessage');
+    if (messageElement) {
+        messageElement.style.display = 'block';
+    }
+
+    // بدء عملية تسجيل الدخول
+    handleGoogleAuth();
+}
+// ===== تحديث أزرار التصدير بناءً على حالة المصادقة =====
+function updateExportButtons() {
+    const exportToDriveBtn = document.getElementById('exportToDriveBtn');
+    const driveExportStatus = document.getElementById('driveExportStatus');
+    
+    if (isGoogleAuthenticated) {
+        exportToDriveBtn.disabled = false;
+        exportToDriveBtn.innerHTML = '🔼 رفع إلى Google Drive';
+        driveExportStatus.innerHTML = '<span style="color: green;">✓ متصل بـ Google Drive</span>';
+    } else {
+        exportToDriveBtn.disabled = true;
+        exportToDriveBtn.innerHTML = '🔒 يلزم تسجيل الدخول';
+        driveExportStatus.innerHTML = '<span style="color: orange;">⚠️ يلزم تسجيل الدخول لاستخدام Google Drive</span>';
+    }
+}
+
+// ===== تحديث أزرار الاستيراد بناءً على حالة المصادقة =====
+function updateImportButtons() {
+    const importFromDriveBtn = document.getElementById('importFromDriveBtn');
+    const driveImportStatus = document.getElementById('driveImportStatus');
+    
+    if (isGoogleAuthenticated) {
+        importFromDriveBtn.disabled = false;
+        importFromDriveBtn.innerHTML = '🔽 استيراد من Google Drive';
+        driveImportStatus.innerHTML = '<span style="color: green;">✓ متصل بـ Google Drive</span>';
+    } else {
+        importFromDriveBtn.disabled = true;
+        importFromDriveBtn.innerHTML = '🔒 يلزم تسجيل الدخول';
+        driveImportStatus.innerHTML = '<span style="color: orange;">⚠️ يلزم تسجيل الدخول لاستخدام Google Drive</span>';
+    }
+}
 
   window.onload = () => {
     const versionBtn = document.getElementById("versionButton");
@@ -1268,122 +1529,8 @@ function exportDataToFile(filename = null) {
     }
     
     // طريقة المشاركة للـ APK
-    shareData(jsonString, filename);
+    
 }
-
-// ===== دالة المشاركة للـ APK =====
-function shareData(jsonString, filename = null) {
-    // إنشاء Blob
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    
-    // إنشاء URL للـ Blob
-    const url = URL.createObjectURL(blob);
-    
-    // اسم الملف الافتراضي
-    const finalFilename = filename || makeBackupFilename();
-    
-    // محاولة استخدام Web Share API إذا متاح
-    if (navigator.share && navigator.canShare) {
-        try {
-            const file = new File([blob], finalFilename, { type: 'application/json' });
-            
-            if (navigator.canShare({ files: [file] })) {
-                navigator.share({
-                    files: [file],
-                    title: 'تصدير بيانات دفتر الديون',
-                    text: 'البيانات المصدرة من تطبيق دفتر الديون'
-                }).then(() => {
-                    alert('✅ تم تصدير البيانات ومشاركتها بنجاح');
-                }).catch((error) => {
-                    console.log('مشاركة فشلت:', error);
-                    showAlternativeOptions(url, finalFilename);
-                });
-            } else {
-                showAlternativeOptions(url, finalFilename);
-            }
-        } catch (error) {
-            console.log('Web Share API غير مدعوم:', error);
-            showAlternativeOptions(url, finalFilename);
-        }
-    } else {
-        showAlternativeOptions(url, finalFilename);
-    }
-}
-
-// ===== عرض خيارات بديلة =====
-function showAlternativeOptions(url, filename) {
-    // إنشاء واجهة بديلة للتنزيل
-    const downloadDiv = document.createElement('div');
-    downloadDiv.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        z-index: 10000;
-        text-align: center;
-        max-width: 90%;
-    `;
-    
-    downloadDiv.innerHTML = `
-        <h3 style="color: #2E8B57; margin-bottom: 15px;">تصدير البيانات</h3>
-        <p style="margin-bottom: 15px;">اختر طريقة لتصدير البيانات:</p>
-        
-        <button onclick="copyToClipboard()" style="
-            background: #87CEEB;
-            color: black;
-            border: none;
-            padding: 12px 20px;
-            margin: 5px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-        ">نسخ البيانات بشكل نصي</button>
-        
-        <button onclick="openInNewTab('${url}')" style="
-            background: #2E8B57;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            margin: 5px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-        ">فتح البيانات في نافذة جديدة</button>
-        
-        <button onclick="saveToLocalStorage()" style="
-            background: #FF4444;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            margin: 5px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-        ">حفظ كنسخة احتياطية داخل التطبيق</button>
-        
-        <button onclick="this.parentElement.remove()" style="
-            background: #CCCCCC;
-            color: black;
-            border: none;
-            padding: 10px 15px;
-            margin-top: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        ">إلغاء</button>
-    `;
-    
-    document.body.appendChild(downloadDiv);
-}
-
-// ===== الخيارات البديلة =====
 function copyToClipboard() {
     const data = {
         clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
@@ -1456,15 +1603,228 @@ function restoreFromBackup() {
 }
 
         // ===== وظائف Google Drive =====
-        function setupGoogleDriveButtons() {
-            document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleAuth);
-            document.getElementById('syncDriveBtn').addEventListener('click', syncWithDrive);
-            document.getElementById('importDriveBtn').addEventListener('click', importFromDrive);
-        }
+        // ===== إعداد أزرار Google Drive مع تتبع =====
+function setupGoogleDriveButtons() {
+    console.log('🔧 جاري إعداد أزرار Google Drive...');
+    
+    const authBtn = document.getElementById('googleAuthBtn');
+    const syncBtn = document.getElementById('syncDriveBtn');
+    const importBtn = document.getElementById('importDriveBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (authBtn) {
+        authBtn.addEventListener('click', handleGoogleAuth);
+        console.log('✅ تم إعداد زر تسجيل الدخول');
+    }
+    
+    if (syncBtn) {
+        syncBtn.addEventListener('click', syncWithDrive);
+        console.log('✅ تم إعداد زر المزامنة');
+    }
+    
+    if (importBtn) {
+        importBtn.addEventListener('click', importFromDrive);
+        console.log('✅ تم إعداد زر الاستيراد');
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleGoogleLogout);
+        console.log('✅ تم إعداد زر تسجيل الخروج');
+    }
+}
 
         // ===== المصادقة مع Google =====
         // ===== مصادقة Google - إصدار محسن =====
-        function handleGoogleAuth() {
+        // ===== مصادقة Google - إصدار محسن =====
+// ===== إعدادات OAuth =====
+const CLIENT_ID = '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+// ===== حفظ حالة المصادقة =====
+function saveAuthState(tokenResponse) {
+    const authState = {
+        accessToken: tokenResponse.access_token,
+        expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
+        scope: tokenResponse.scope,
+        tokenType: tokenResponse.token_type
+    };
+    
+    localStorage.setItem('googleAuth', JSON.stringify(authState));
+    console.log('✅ تم حفظ حالة المصادقة');
+}
+
+
+// ===== اختبار صلاحية التوكن =====
+async function testTokenValidity() {
+    if (!isGoogleAuthenticated || !googleAccessToken) {
+        console.log('❌ لا يمكن اختبار التوكن - غير مصرح به');
+        return;
+    }
+    
+    try {
+        console.log('🧪 جاري اختبار صلاحية التوكن...');
+        
+        // محاولة بسيطة للوصول إلى Drive API
+        await initGapi();
+        gapi.client.setToken({ access_token: googleAccessToken });
+        
+        const response = await gapi.client.drive.about.get({
+            fields: 'user'
+        });
+        
+        console.log('✅ التوكن صالح - المستخدم:', response.result.user.displayName);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ التوكن غير صالح:', error);
+        
+        if (error.status === 401) {
+            console.log('🔐 التوكن منتهي الصلاحية - جاري المسح...');
+            clearAuthState();
+        }
+        return false;
+    }
+}
+// ===== تحميل حالة المصادقة - الإصدار المحسن =====
+function loadAuthState() {
+    console.log('🔍 جاري البحث عن حالة مصادقة محفوظة...');
+    
+    try {
+        const saved = localStorage.getItem('googleAuth');
+        console.log('📁 بيانات المصادقة في التخزين:', saved ? 'موجودة' : 'غير موجودة');
+        
+        if (saved) {
+            const authState = JSON.parse(saved);
+            const now = Date.now();
+            
+            console.log('⏰ وقت الآن:', new Date(now).toLocaleString('ar-EG'));
+            console.log('⏰ وقت انتهاء الصلاحية:', new Date(authState.expiresAt).toLocaleString('ar-EG'));
+            
+            // التحقق من أن التوكن لم ينتهي صلاحيته
+            if (now < authState.expiresAt) {
+                googleAccessToken = authState.accessToken;
+                isGoogleAuthenticated = true;
+                
+                updateAuthUI();
+                console.log('✅ تم استعادة حالة المصادقة تلقائيًا');
+                console.log('🔑 التوكن:', googleAccessToken ? 'موجود' : 'غير موجود');
+                
+                // اختبار سريع للتوكن
+                testTokenValidity();
+                return true;
+            } else {
+                console.log('⚠️ انتهت صلاحية التوكن - تم التخزين منذ:', Math.round((now - authState.expiresAt) / 1000 / 60), 'دقيقة');
+                clearAuthState();
+            }
+        } else {
+            console.log('ℹ️ لا توجد حالة مصادقة محفوظة');
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تحميل حالة المصادقة:', error);
+        clearAuthState();
+    }
+    return false;
+}
+
+// ===== تحديث واجهة المصادقة =====
+// ===== تحديث واجهة المصادقة - الإصدار المحسن =====
+function updateAuthUI() {
+    console.log('🎨 تحديث واجهة المستخدم - حالة المصادقة:', isGoogleAuthenticated);
+    
+    const authBtn = document.getElementById('googleAuthBtn');
+    const syncBtn = document.getElementById('syncDriveBtn');
+    const importBtn = document.getElementById('importDriveBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (isGoogleAuthenticated) {
+        console.log('👤 تحديث الواجهة: مستخدم مسجل الدخول');
+        
+        if (authBtn) authBtn.style.display = 'none';
+        if (syncBtn) syncBtn.style.display = 'inline-block';
+        if (importBtn) importBtn.style.display = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        
+        // إضافة معلومات إضافية
+        addUserInfoToUI();
+        
+    } else {
+        console.log('👤 تحديث الواجهة: مستخدم غير مسجل');
+        
+        if (authBtn) authBtn.style.display = 'inline-block';
+        if (syncBtn) syncBtn.style.display = 'none';
+        if (importBtn) importBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+    }
+}
+
+// ===== إضافة معلومات المستخدم للواجهة =====
+async function addUserInfoToUI() {
+    try {
+        await initGapi();
+        gapi.client.setToken({ access_token: googleAccessToken });
+        
+        const response = await gapi.client.drive.about.get({
+            fields: 'user'
+        });
+        
+        const user = response.result.user;
+        console.log('👤 معلومات المستخدم:', user);
+        
+        // يمكنك إضافة اسم المستخدم للواجهة إذا أردت
+        // document.getElementById('userInfo').textContent = `مرحباً ${user.displayName}`;
+        
+    } catch (error) {
+        console.log('⚠️ لا يمكن جلب معلومات المستخدم:', error);
+    }
+}
+
+// ===== مسح حالة المصادقة =====
+function clearAuthState() {
+    localStorage.removeItem('googleAuth');
+    isGoogleAuthenticated = false;
+    googleAccessToken = null;
+    updateAuthUI();
+}
+
+// ===== تسجيل الخروج من Google =====
+function handleGoogleLogout() {
+    if (confirm('هل تريد تسجيل الخروج من حساب Google؟')) {
+        // إلغاء صلاحية التوكن من جانب Google
+        if (googleAccessToken) {
+            google.accounts.oauth2.revoke(googleAccessToken, () => {
+                console.log('✅ تم إلغاء التوكن');
+            });
+        }
+        
+        // مسح الحالة المحلية
+        clearAuthState();
+        
+        alert('✅ تم تسجيل الخروج بنجاح');
+    }
+}
+// ===== التحقق النهائي من حالة المصادقة =====
+function finalAuthCheck() {
+    console.log('🔍 التحقق النهائي من حالة المصادقة...');
+    console.log('🔑 isGoogleAuthenticated:', isGoogleAuthenticated);
+    console.log('🔑 googleAccessToken:', googleAccessToken ? 'موجود' : 'غير موجود');
+    console.log('🔑 localStorage googleAuth:', localStorage.getItem('googleAuth') ? 'موجود' : 'غير موجود');
+    
+    if (isGoogleAuthenticated && googleAccessToken) {
+        console.log('🎉 التطبيق جاهز - المستخدم مسجل الدخول');
+    } else {
+        console.log('ℹ️ التطبيق جاهز - يرجى تسجيل الدخول');
+    }
+}
+
+// أضف هذا الاستدعاء في نهاية DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    // ... الكود السابق ...
+    
+    // التحقق النهائي
+    setTimeout(finalAuthCheck, 1000);
+});
+// ===== مصادقة Google - الإصدار المصحح =====
+function handleGoogleAuth() {
     console.log('🔐 جاري فتح نافذة المصادقة...');
     
     if (typeof google === 'undefined') {
@@ -1472,27 +1832,30 @@ function restoreFromBackup() {
         return;
     }
 
+    // متغير لتتبع ما إذا كانت المصادقة اكتملت بنجاح
+    let authCompleted = false;
+
     try {
         const client = google.accounts.oauth2.initTokenClient({
-            client_id: '818632760933-3j6rmg7vui3epuc15nejm7od6mbb37km.apps.googleusercontent.com',
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            prompt: 'consent', // 🔥 هذا السطر مهم - يجبر ظهور النافذة
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            prompt: 'consent',
             callback: (response) => {
+                authCompleted = true;
                 if (response && response.access_token) {
                     // نجحت المصادقة!
                     googleAccessToken = response.access_token;
                     isGoogleAuthenticated = true;
                     
-                    document.getElementById('googleAuthBtn').style.display = 'none';
-                    document.getElementById('syncDriveBtn').style.display = 'inline-block';
-                    document.getElementById('importDriveBtn').style.display = 'inline-block';
+                    // حفظ حالة المصادقة مع وقت الانتهاء
+                    saveAuthState(response);
+                    updateAuthUI();
                     
-                    alert('🎉 تم تسجيل الدخول بنجاح!');
-                    console.log('✅ Token:', response.access_token.substring(0, 20) + '...');
+                    console.log('✅ تم تسجيل الدخول بنجاح');
                     
-                    // جرب مزامنة فورية للتأكد
+                    // عرض الخيارات الذكية بعد تسجيل الدخول
                     setTimeout(() => {
-                        syncWithDrive();
+                        showSyncOptions();
                     }, 1000);
                     
                 } else {
@@ -1500,17 +1863,21 @@ function restoreFromBackup() {
                 }
             },
             error_callback: (error) => {
-                console.error('🔴 خطأ المصادقة:', error);
-                
-                if (error.type === 'popup_closed') {
-                    alert('⚠️ تم إغلاق النافذة. جرب مرة أخرى واتركها مفتوحة.');
+                // فقط نعالج الخطأ إذا لم تكتمل المصادقة بنجاح
+                if (!authCompleted) {
+                    console.error('🔴 خطأ المصادقة:', error);
+                    
+                    if (error.type === 'popup_closed') {
+                        alert('⚠️ تم إغلاق نافذة التسجيل. يرجى المحاولة مرة أخرى.');
+                    } else {
+                        alert('❌ خطأ في المصادقة: ' + error.message);
+                    }
                 } else {
-                    alert('❌ خطأ: ' + JSON.stringify(error));
+                    console.log('🔄 نافذة المصادقة أغلقت بعد النجاح - هذا طبيعي');
                 }
             }
         });
         
-        console.log('🔄 طلب token مع prompt...');
         client.requestAccessToken();
         
     } catch (error) {
@@ -1519,56 +1886,282 @@ function restoreFromBackup() {
     }
 }
 
+// ===== التحقق من الاتصال بالإنترنت =====
+function checkInternetConnection() {
+    return navigator.onLine;
+}
+
+// ===== التحقق من وجود بيانات سحابية مع معالجة الأخطاء =====
+async function checkCloudData() {
+    // التحقق من الاتصال أولاً
+    if (!checkInternetConnection()) {
+        return { 
+            exists: false, 
+            message: "❌ لا يوجد اتصال بالإنترنت",
+            hasInternet: false
+        };
+    }
+
+    try {
+        await initGapi();
+        gapi.client.setToken({ access_token: googleAccessToken });
+
+        const response = await gapi.client.drive.files.list({
+            q: "name='debt_backup.json' and trashed=false",
+            fields: 'files(id, name, modifiedTime)',
+            spaces: 'drive'
+        });
+
+        const files = response.result.files;
+        
+        if (files.length === 0) {
+            return { 
+                exists: false, 
+                message: "لا توجد بيانات سحابية",
+                hasInternet: true
+            };
+        }
+
+        const cloudFile = files[0];
+        const cloudTime = new Date(cloudFile.modifiedTime);
+        const lastBackup = localStorage.getItem('lastBackupTime');
+        const localTime = lastBackup ? new Date(lastBackup) : null;
+        
+        return {
+            exists: true,
+            cloudTime: cloudTime,
+            localTime: localTime,
+            fileId: cloudFile.id,
+            isNewer: localTime ? cloudTime > localTime : true,
+            hasInternet: true
+        };
+        
+    } catch (error) {
+        console.error('❌ خطأ في التحقق من البيانات السحابية:', error);
+        return { 
+            exists: false, 
+            message: "فشل في الوصول إلى البيانات السحابية",
+            hasInternet: false,
+            error: error.message
+        };
+    }
+}
+
+// ===== عرض خيارات المزامنة المحسنة =====
+async function showSyncOptions() {
+    try {
+        const cloudCheck = await checkCloudData();
+        
+        let message = '🎉 تم تسجيل الدخول بنجاح!\n\n';
+        
+        if (!cloudCheck.hasInternet) {
+            message += '🌐 ' + cloudCheck.message + '\n\n';
+            message += '⏳ يرجى التحقق من اتصال الإنترنت والمحاولة لاحقاً.';
+            alert(message);
+            return;
+        }
+        
+        if (cloudCheck.exists) {
+            message += `📅 آخر تحديث سحابي: ${cloudCheck.cloudTime.toLocaleString('ar-EG')}\n`;
+            
+            if (cloudCheck.localTime) {
+                message += `📅 آخر تحديث محلي: ${cloudCheck.localTime.toLocaleString('ar-EG')}\n\n`;
+                
+                if (cloudCheck.isNewer) {
+                    message += '💡 البيانات السحابية أحدث من البيانات المحلية.\n';
+                } else {
+                    message += '💡 البيانات المحلية أحدث من البيانات السحابية.\n';
+                }
+            }
+            
+            message += '\nماذا تريد أن تفعل؟\n\n';
+            message += 'موافق: استيراد البيانات من Google Drive\n';
+            message += 'إلغاء: رفع البيانات المحلية إلى Google Drive';
+        } else {
+            message += '🌥️ لا توجد بيانات سحابية.\n\n';
+            message += 'موافق: رفع البيانات المحلية إلى Google Drive\n';
+            message += 'إلغاء: لا أفعل شيئاً الآن';
+        }
+        
+        const choice = confirm(message);
+        
+        if (choice) {
+            if (cloudCheck.exists) {
+                importFromDrive();
+            } else {
+                syncWithDrive();
+            }
+        } else if (cloudCheck.exists) {
+            syncWithDrive();
+        }
+        
+    } catch (error) {
+        console.error('❌ خطأ في عرض الخيارات:', error);
+        showBasicSyncOptions();
+    }
+}
+
+// ===== الخيارات الأساسية كبديل عند وجود خطأ =====
+function showBasicSyncOptions() {
+    const choice = confirm(
+        '🎉 تم تسجيل الدخول بنجاح!\n\n' +
+        'ماذا تريد أن تفعل؟\n\n' +
+        'موافق: استيراد البيانات من Google Drive\n' +
+        'إلغاء: رفع البيانات المحلية إلى Google Drive'
+    );
+    
+    if (choice) {
+        importFromDrive();
+    } else {
+        if (clients.length > 0 || transactions.length > 0) {
+            if (confirm('⚠️ هل تريد رفع البيانات المحلية إلى Google Drive؟')) {
+                syncWithDrive();
+            }
+        } else {
+            alert('ℹ️ لا توجد بيانات محلية لرفعها.');
+        }
+    }
+}
+
         // ===== مزامنة البيانات مع Google Drive =====
         // دالة المزامنة البسيطة
-function syncWithDrive() {
+// ===== مزامنة البيانات مع Google Drive =====
+// ===== مزامنة البيانات مع معالجة الأخطاء =====
+async function syncWithDrive() {
     if (!isGoogleAuthenticated) {
         alert('❌ يرجى تسجيل الدخول أولاً');
         return;
     }
 
-    console.log('🔼 جاري الرفع إلى Drive...');
-    
-    const data = {
-        clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
-        transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
-        lastSync: new Date().toLocaleString('ar-EG')
-    };
+    // التحقق من الاتصال أولاً
+    if (!checkInternetConnection()) {
+        alert('❌ لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
+        return;
+    }
 
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
+    try {
+        console.log('🔼 جاري تهيئة GAPI...');
+        await initGapi();
+        
+        gapi.client.setToken({ access_token: googleAccessToken });
 
-    findOrCreateDriveFile(blob)
-        .then(() => {
-            alert('✅ تم رفع البيانات إلى Google Drive بنجاح');
-        })
-        .catch(error => {
-            console.error('❌ خطأ في الرفع:', error);
+        console.log('🔼 جاري الرفع إلى Drive...');
+        
+        const data = {
+            clients: JSON.parse(localStorage.getItem('debtClients') || '[]'),
+            transactions: JSON.parse(localStorage.getItem('debtTransactions') || '[]'),
+            lastSync: new Date().toLocaleString('ar-EG')
+        };
+
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+
+        await findOrCreateDriveFile(blob);
+        
+        // تحديث وقت آخر مزامنة
+        localStorage.setItem('lastBackupTime', new Date().toISOString());
+        
+        alert('✅ تم رفع البيانات إلى Google Drive بنجاح');
+        
+    } catch (error) {
+        console.error('❌ خطأ في الرفع:', error);
+        
+        if (error.message.includes('network') || error.message.includes('Internet')) {
+            alert('❌ فشل الاتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
+        } else {
             alert('❌ فشل رفع البيانات: ' + error.message);
-        });
+        }
+    }
 }
 
 
-        // ===== البحث عن ملف أو إنشاء ملف جديد في Drive =====
-        function findOrCreateDriveFile(blob) {
-            return new Promise((resolve, reject) => {
-                gapi.client.drive.files.list({
-                    q: "name='debt_backup.json' and trashed=false",
-                    fields: 'files(id, name)'
-                }).then(response => {
-                    const files = response.result.files;
-                    
-                    if (files.length > 0) {
-                        // تحديث الملف الموجود
-                        updateDriveFile(files[0].id, blob).then(resolve).catch(reject);
-                    } else {
-                        // إنشاء ملف جديد
-                        createDriveFile(blob).then(resolve).catch(reject);
-                    }
-                }).catch(reject);
-            });
+// ===== البحث عن ملف أو إنشاء ملف جديد في Drive =====
+async function findOrCreateDriveFile(blob) {
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: "name='debt_backup.json' and trashed=false",
+            fields: 'files(id, name)',
+            spaces: 'drive'
+        });
+
+        const files = response.result.files;
+        
+        if (files.length > 0) {
+            await updateDriveFile(files[0].id, blob);
+        } else {
+            await createDriveFile(blob);
+        }
+    } catch (error) {
+        throw new Error('فشل في البحث عن الملف: ' + error.message);
+    }
+}
+
+// ===== استيراد البيانات من Google Drive =====
+async function importFromDrive() {
+    if (!isGoogleAuthenticated) {
+        alert('❌ يرجى تسجيل الدخول أولاً');
+        return;
+    }
+
+    // التحقق من الاتصال أولاً
+    if (!checkInternetConnection()) {
+        alert('❌ لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
+        return;
+    }
+
+    if (!confirm('⚠️ سيتم استبدال جميع البيانات الحالية بالبيانات من Google Drive. هل تريد المتابعة؟')) {
+        return;
+    }
+
+    try {
+        console.log('🔽 جاري تهيئة GAPI...');
+        await initGapi();
+        
+        gapi.client.setToken({ access_token: googleAccessToken });
+
+        console.log('🔽 جاري البحث عن الملف...');
+        const response = await gapi.client.drive.files.list({
+            q: "name='debt_backup.json' and trashed=false",
+            fields: 'files(id, name)',
+            spaces: 'drive'
+        });
+
+        const files = response.result.files;
+        
+        if (files.length === 0) {
+            alert('❌ لم يتم العثور على ملف بيانات في Drive');
+            return;
         }
 
+        console.log('🔽 جاري تحميل الملف...');
+        const fileResponse = await gapi.client.drive.files.get({
+            fileId: files[0].id,
+            alt: 'media'
+        });
+
+        const data = fileResponse.result;
+
+        // استبدال البيانات
+        clients = data.clients || [];
+        transactions = data.transactions || [];
+        localStorage.setItem('authenticated', 'true');
+        saveData();
+        updateStats();
+        displayClients();
+        displayTransactions();
+        
+        alert('✅ تم استيراد البيانات من Drive بنجاح');
+        
+    } catch (error) {
+        console.error('❌ خطأ في الاستيراد:', error);
+        
+        if (error.message.includes('network') || error.message.includes('Internet')) {
+            alert('❌ فشل الاتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
+        } else {
+            alert('❌ فشل استيراد البيانات: ' + error.message);
+        }
+    }
+}
         // ===== تحديث ملف موجود في Drive =====
         function updateDriveFile(fileId, blob) {
             return new Promise((resolve, reject) => {
@@ -1625,55 +2218,7 @@ function syncWithDrive() {
             });
         }
 
-        // ===== استيراد البيانات من Google Drive =====
-        function importFromDrive() {
-    if (!isGoogleAuthenticated) {
-        alert('❌ يرجى تسجيل الدخول أولاً');
-        return;
-    }
-
-    if (!confirm('⚠️ سيتم استبدال جميع البيانات الحالية بالبيانات من Google Drive. هل تريد المتابعة؟')) {
-        return;
-    }
-
-    console.log('🔽 جاري الاستيراد من Drive...');
     
-    gapi.client.drive.files.list({
-        q: "name='debt_backup.json' and trashed=false",
-        fields: 'files(id, name)'
-    }).then(response => {
-        const files = response.result.files;
-        
-        if (files.length === 0) {
-            alert('❌ لم يتم العثور على ملف بيانات في Drive');
-            return;
-        }
-
-        fetch(`https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${googleAccessToken}` }
-        }).then(response => {
-            if (!response.ok) throw new Error('فشل تحميل الملف');
-            return response.json();
-        }).then(data => {
-            // استبدال البيانات
-            clients = data.clients || [];
-            transactions = data.transactions || [];
-            
-            saveData();
-            updateStats();
-            displayClients();
-            displayTransactions();
-            
-            alert('✅ تم استيراد البيانات من Drive بنجاح');
-        }).catch(error => {
-            console.error('❌ خطأ في الاستيراد:', error);
-            alert('❌ فشل استيراد البيانات: ' + error.message);
-        });
-    }).catch(error => {
-        console.error('❌ خطأ في البحث:', error);
-        alert('❌ فشل البحث عن الملف: ' + error.message);
-    });
-}
 
 
         // رمز الامان
@@ -1728,7 +2273,11 @@ window.onload = () => {
         document.getElementById("appContent").style.display = "block";
     }
 };
-
+// دالة تستدعى عند تحميل مكتبة gapi
+function onGapiLoad() {
+    console.log('✅ Google APIs library loaded');
+    // يمكنك إضافة أي تهيئة إضافية هنا إذا لزم الأمر
+}
 //تاريخ اخر دفعة 
 function getLastPaymentDate(clientId) {
   const payments = transactions
