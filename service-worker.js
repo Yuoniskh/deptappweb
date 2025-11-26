@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'financial-manager-v2.3.0'; // تم تحديث الإصدار إلى 2.3.0
+const CACHE_NAME = 'financial-manager-v2.4.0'; // تم تحديث الإصدار إلى 2.3.0
 
 const urlsToCache = [
   '/',

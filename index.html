@@ -39,482 +39,7 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- استيراد مكتبة Google APIs للتعامل مع Google Drive -->
 <script src="https://apis.google.com/js/api.js?onload=onGapiLoad"></script>
-    <style>
-        /* ===== إعدادات عامة ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-
-        :root {
-            --primary-green: #2E8B57;
-            --light-green: #E8F5E8;
-            --sky-blue: #87CEEB;
-            --dark-blue: #4682B4;
-            --white: #FFFFFF;
-            --black: #333333;
-            --gray: #F5F5F5;
-            --red: #FF4444;
-        }
-
-        body {
-            background: var(--light-green);
-            color: var(--black);
-            line-height: 1.6;
-        }
-        
-
-        /* نافذة التحقق */
-        #authModal {
-            position: fixed;
-            top: 0; right: 0; bottom: 0; left: 0;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .auth-box {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 10px;
-            width: 300px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-
-        .auth-box input {
-            width: 90%;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 16px;
-            border: 1px solid #b2dfdb; /* أخضر فاتح */
-            border-radius: 5px;
-        }
-
-        .auth-box button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background: #b2dfdb; /* أخضر فاتح */
-            color: #004d40;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        #errorMsg {
-            color: #ef9a9a; /* أحمر فاتح */
-            margin-top: 10px;
-        }
-
-        .container {
-            max-width: 100%;
-            padding: 15px;
-            padding-bottom: 80px; /* مساحة للأزرار السفلية */
-        }
-
-        /* ===== رأس الصفحة ===== */
-        .header {
-            text-align: center;
-            background: var(--primary-green);
-            color: var(--white);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-
-        /* ===== الأزرار العامة ===== */
-        .btn {
-            background: var(--sky-blue);
-            color: var(--black);
-            border: none;
-            padding: 15px 20px;
-            margin: 10px 0;
-            width: 100%;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-        }
-
-        .btn:active {
-            background: var(--dark-blue);
-            transform: scale(0.98);
-        }
-
-        .btn-danger {
-            background: var(--red);
-            color: var(--white);
-        }
-        
-        .btn-secondary {
-            background: #CCCCCC;
-            color: var(--black);
-        }
-
-        /* ===== إدارة الشاشات ===== */
-        .screen {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== نماذج الإدخال ===== */
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: var(--primary-green);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #DDD;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--sky-blue);
-            outline: none;
-        }
-
-        textarea.form-control {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        /* ===== مربع البحث ===== */
-        .search-box {
-            margin: 15px 0;
-            position: relative;
-        }
-
-        .search-box input {
-            padding-right: 40px;
-        }
-
-        /* ===== حاويات القوائم ===== */
-        .list-container {
-            background: var(--white);
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .list-item {
-            padding: 15px;
-            border-bottom: 1px solid #EEE;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .list-item:last-child {
-            border-bottom: none;
-        }
-
-        .list-item:hover {
-            background: var(--gray);
-        }
-
-        .client-name {
-            font-weight: bold;
-            font-size: 18px;
-            color: var(--primary-green);
-        }
-
-        .client-debt {
-            color: var(--red);
-            font-weight: bold;
-        }
-
-        .transaction-info {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        /* ===== أزرار التنقل ===== */
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .nav-buttons .btn {
-            flex: 1;
-        }
-
-        /* ===== النوافذ المنبثقة ===== */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0; 
-		right: 0; 
-		bottom: 0;
-
-
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-justify-content: center;
-    align-items: center;
-
-
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background: var(--white);
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-
-            /* الحل الحقيقي */
-            max-height: 80vh;       /* أقصى ارتفاع 80% من الشاشة */
-            overflow-y: auto;       /* تفعيل التمرير العمودي */
-        }
-        .close {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .results {
-            margin-top: 15px;
-        }
-
-
-
-        /* ===== الإحصائيات ===== */
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .stat-item {
-            background: var(--white);
-            padding: 15px;
-            border-radius: 8px;
-            flex: 1;
-            margin: 0 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-green);
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-        }
-
-        /* ===== أزرار الأدوات السفلية ===== */
-        .bottom-tools {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--white);
-            padding: 10px 15px;
-            border-top: 1px solid #DDD;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
-        }
-
-        .tool-bar {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        /* أزرار ثانوية صغيرة */
-        .btn-mini {
-            padding: 8px 12px;
-            font-size: 12px;
-            border-radius: 6px;
-            background: #f0f0f0;
-            color: #222;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            box-shadow: none;
-            transition: background .15s, transform .08s;
-        }
-
-        /* ألوان خاصة للـ Drive / Export */
-        .btn-mini.primary { 
-            background: #eef9f2; 
-            color: #2E8B57; 
-            border-color: #d6f0de; 
-        }
-        
-        .btn-mini.secondary { 
-            background: #ffffff; 
-            color: #555; 
-            border-color: #e6e6e6; 
-        }
-        
-        .btn-mini.danger { 
-            background: #fff5f5; 
-            color: #c0392b; 
-            border-color: #f2dede; 
-        }
-
-        .btn-mini.google { 
-            background: #f1f8ff; 
-            color: #1a73e8; 
-            border-color: #d2e3fc; 
-        }
-
-        /* تأثير بسيط عند التمرير */
-        .btn-mini:hover { 
-            background: #f7f7f7; 
-            transform: translateY(-1px); 
-        }
-
-        /* ===== استجابة للشاشات الصغيرة ===== */
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            .btn {
-                padding: 12px 15px;
-                font-size: 16px;
-            }
-            
-            .stat-value {
-                font-size: 20px;
-            }
-            
-            .tool-bar {
-                justify-content: center;
-                gap: 6px;
-            }
-            
-            .btn-mini {
-                padding: 6px 10px;
-                font-size: 13px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .btn-mini {
-                padding: 6px 8px;
-                font-size: 12px;
-            }
-        }
-        
-.contact-buttons a {
-    display: block;
-    margin: 10px auto;
-    padding: 10px;
-    background-color: #b2dfdb; /* أخضر فاتح */
-    color: #000;
-    border-radius: 5px;
-    text-decoration: none;
-    width: 80%;
-}
-
-.contact-buttons a:hover {
-    background-color: #80cbc4;
-}
-
-/* ===== أنماط النوافذ المنبثقة الجديدة ===== */
-.export-options, .import-options {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.option-group {
-    background: var(--light-green);
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-}
-
-.option-group h3 {
-    color: var(--primary-green);
-    margin-bottom: 8px;
-    font-size: 16px;
-}
-
-.option-group p {
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 12px;
-    line-height: 1.4;
-}
-
-.option-group .btn {
-    width: 100%;
-    margin: 5px 0;
-}
-
-.import-status {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    color: #856404;
-}
-
-.import-status.success {
-    background: #d1edff;
-    border: 1px solid #b3d9ff;
-    color: #004085;
-}
-
-.import-status.error {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-}
-
-    </style>
+<link rel="stylesheet" href="index.css">
 </head>
 <body>
     <!-- نافذة التحقق -->
@@ -554,9 +79,76 @@ justify-content: center;
         <!-- ===== الشاشة الرئيسية ===== -->
         <div id="mainScreen" class="screen active">
             <div class="header">
-                <h1>لا تنسوا عمل تصدير للبيانات </h1>
-                <button onclick="showInfoModal()" id = "versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;" >v2.3.0</button>
+                <h1 id="dollar">شراء: وبيع</h1>
+                <button onclick="showInfoModal()" id="versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;">v2.3.0</button>
             </div>
+            <script>
+                // دالة لجلب البيانات من موقع الليرة اليوم
+                async function fetchExchangeRates() {
+                  try {
+                    // استخدام CORS proxy لتجنب مشاكل CORS
+                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                    const targetUrl = 'https://sp-today.com/currency/us_dollar/city/damascus';
+                    
+                    const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+                    
+                    if (!response.ok) {
+                      throw new Error(`خطأ في الشبكة: ${response.status}`);
+                    }
+                    
+                    const htmlText = await response.text();
+                    
+                    // تحليل HTML
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+                    
+                    // استخراج سعر الشراء والبيع من الموقع
+                    const buyPrice = doc.querySelector('.cur-data .row-data .cur-col:first-child .value')?.textContent.trim();
+                    const sellPrice = doc.querySelector('.cur-data .row-data .cur-col:nth-child(2) .value')?.textContent.trim();
+                    
+                    if (buyPrice && sellPrice) {
+                      return {
+                        buy: buyPrice,
+                        sell: sellPrice
+                      };
+                    } else {
+                      throw new Error('لم نتمكن من العثور على الأسعار في الصفحة');
+                    }
+                    
+                  } catch (error) {
+                    console.error('فشل في جلب البيانات:', error);
+                    throw error;
+                  }
+                }
+                
+                // دالة لتحديث العنصر بـ id='dollar'
+                async function updateDollarElement() {
+                  const dollarElement = document.getElementById('dollar');
+                  if (!dollarElement) {
+                    console.error('لم يتم العثور على عنصر بـ id="dollar"');
+                    return;
+                  }
+                  
+                  try {
+                    dollarElement.innerHTML = 'جاري تحديث الأسعار...';
+                    
+                    const rates = await fetchExchangeRates();
+                    
+                    // تحديث العنصر
+                    dollarElement.textContent = `  شراء ${rates.buy} ل.س | بيع ${rates.sell} ل.س`;
+                    
+                  } catch (error) {
+                    dollarElement.textContent = `خطأ في جلب البيانات: ${error.message}`;
+                  }
+                }
+                
+                // تحديث السعر عند تحميل الصفحة
+                document.addEventListener('DOMContentLoaded', updateDollarElement);
+                
+                // تحديث السعر كل 5 دقائق (300000 مللي ثانية)
+                setInterval(updateDollarElement, 300000);
+              </script>   
+                
 
             <div class="stats">
                 <div class="stat-item">
@@ -752,12 +344,26 @@ justify-content: center;
             <span class="close-btn" onclick="closeInfoModal()">×</span>
             <h2>حول التطبيق</h2>
             <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 2.3.0<br>*تحسينات أمنية و تطبيق مستقر اكثر <br>*اتصال مستقر مع غوغل <br>*تصدير و استيراد إلى غوغل درايف <br>*يمكنك فتح الحساب نفسه على اكثر من جهاز </p>
+            <div class="stats"> <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.3.0...">
+                <button class="btn-mini">بريد الدعم و الشكوى</button>
+            </a></div>
             <div class="stats">
-                <a  href="https://www.facebook.com/younismkh" target="_blank"><button class="btn-danger"><img src="icons/fb.png" alt="facebook"></button></a>
-
-                <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.3.0..." ><button class="btn-mini">بريد الدعم و الشكوى</button></a>
-                
-                <a  href="https://www.youtube.com/@youniskhezaran9863" target="_blank"><button class="btn-danger"><img src="icons/yb.png" alt="youtube"></button></a>
+                <a href="https://www.facebook.com/younismkh" target="_blank">
+                    <button class="circle-btn">
+                        <img src="icons/fb.png" alt="facebook">
+                    </button>
+                </a>
+                <a href="https://t.me/fainancialmanger" target="_blank">
+                    <button class="circle-btn">
+                        <img src="icons/tg.png" alt="telegram">
+                    </button>
+                </a>
+               
+                <a href="https://www.youtube.com/@youniskhezaran9863" target="_blank">
+                    <button class="circle-btn">
+                        <img src="icons/yb.png" alt="youtube">
+                    </button>
+                </a>
             </div>
         </div>
     </div>
@@ -771,7 +377,7 @@ justify-content: center;
             <option value="60">أكثر من شهرين</option>
             <option value="90">أكثر من 3 أشهر</option>
             <option value="180">أكثر من 6 أشهر</option>
-            <option value="365">أكثر من سنة</option>
+            <!--<option value="365">أكثر من سنة</option>-->
           </select>
           <button id="filterDebtorsBtn" class="btn btn-primary">عرض الزبائن</button>
           <div id="debtorResults" class="results"></div>
