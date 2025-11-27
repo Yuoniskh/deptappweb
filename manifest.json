@@ -3,7 +3,7 @@
   "name": "مدير مالي",
   "short_name": "مدير مالي",
   "description": "تطبيق لإدارة الديون والمعاملات المالية الشخصية",
-  "version": "2.3.0",
+  "version": "2.4.2",
   "start_url": "/deptappweb/index.html",
   "scope": "/deptappweb/",
   "display": "fullscreen",       

@@ -80,10 +80,9 @@
         <div id="mainScreen" class="screen active">
             <div class="header">
                 <h1 id="dollar">شراء: وبيع</h1>
-                <button onclick="showInfoModal()" id="versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;">v2.4.0</button>
+                <button onclick="showInfoModal()" id="versionButton" style="color: #004d40; font-family: 'Courier New', Courier, monospace; background-color: #80cbc4;">v2.4.2</button>
             </div>
-            <script>
-                // دالة لجلب البيانات من موقع الليرة اليوم
+            <script>// دالة محسنة لجلب البيانات من موقع الليرة اليوم
                 async function fetchExchangeRates() {
                   try {
                     // استخدام CORS proxy لتجنب مشاكل CORS
@@ -107,10 +106,15 @@
                     const sellPrice = doc.querySelector('.cur-data .row-data .cur-col:nth-child(2) .value')?.textContent.trim();
                     
                     if (buyPrice && sellPrice) {
-                      return {
+                      // حفظ البيانات الناجحة في التخزين المحلي
+                      const rates = {
                         buy: buyPrice,
-                        sell: sellPrice
+                        sell: sellPrice,
+                        timestamp: Date.now()
                       };
+                      localStorage.setItem('lastExchangeRates', JSON.stringify(rates));
+                      
+                      return rates;
                     } else {
                       throw new Error('لم نتمكن من العثور على الأسعار في الصفحة');
                     }
@@ -121,7 +125,23 @@
                   }
                 }
                 
-                // دالة لتحديث العنصر بـ id='dollar'
+                // دالة لاستعادة آخر بيانات ناجحة من التخزين المحلي
+                function getLastExchangeRates() {
+                  const lastRates = localStorage.getItem('lastExchangeRates');
+                  if (lastRates) {
+                    const rates = JSON.parse(lastRates);
+                    const now = Date.now();
+                    const oneHour = 60 * 60 * 1000; // ساعة واحدة بالملي ثانية
+                    
+                    // إذا مرت أقل من ساعة على آخر تحديث ناجح، نستخدم البيانات المخزنة
+                    if (now - rates.timestamp < oneHour) {
+                      return rates;
+                    }
+                  }
+                  return null;
+                }
+                
+                // دالة محسنة لتحديث العنصر بـ id='dollar'
                 async function updateDollarElement() {
                   const dollarElement = document.getElementById('dollar');
                   if (!dollarElement) {
@@ -138,7 +158,18 @@
                     dollarElement.textContent = `  شراء ${rates.buy} ل.س | بيع ${rates.sell} ل.س`;
                     
                   } catch (error) {
-                    dollarElement.textContent = `خطأ في جلب البيانات: ${error.message}`;
+                    console.error('فشل في جلب البيانات الحية:', error);
+                    
+                    // محاولة استخدام آخر بيانات ناجحة
+                    const lastRates = getLastExchangeRates();
+                    if (lastRates) {
+                      dollarElement.textContent = `  شراء ${lastRates.buy} ل.س | بيع ${lastRates.sell} ل.س ( old )`;
+                      console.log('تم استخدام آخر بيانات ناجحة بسبب فشل الاتصال');
+                    } else {
+                      // إذا لم توجد بيانات مخزنة، نعرض رسالة واضحة
+                      dollarElement.textContent = '  غير متوفر حالياً - جاري إعادة المحاولة';
+                      console.log('لا توجد بيانات مخزنة، سيتم إعادة المحاولة');
+                    }
                   }
                 }
                 
@@ -343,8 +374,8 @@
         <div class="modal-content">
             <span class="close-btn" onclick="closeInfoModal()">×</span>
             <h2>حول التطبيق</h2>
-            <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 2.4.0<br>*تحسينات أمنية و تطبيق مستقر اكثر <br>* تابع الدولار على التطبيق   </p>
-            <div class="stats"> <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.4.0...">
+            <p>دفتر الديون هو تطبيق بسيط لإدارة المعاملات المالية بين الأفراد من تطوير يونس خيزران . <br> الإصدار 2.4.2<br>*تحسينات أمنية و تطبيق مستقر اكثر <br>* تابع الدولار على التطبيق   </p>
+            <div class="stats"> <a href="mailto:khezaranyounis@outlook.com?subject=طلب دعم&body= مرحبًا، أواجه مشكلة في الدخول الى تطبيق المدير المالي 2.4.2...">
                 <button class="btn-mini">بريد الدعم و الشكوى</button>
             </a></div>
             <div class="stats">
